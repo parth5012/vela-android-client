@@ -58,10 +58,8 @@ export default function RootLayout() {
           shadowColor: 'transparent',
           elevation: 0,
         },
-        headerTitle: 'VELA',
         headerTitleStyle: {
           fontWeight: '900',
-          letterSpacing: 3,
           color: '#818cf8',
           fontSize: 16,
         },
@@ -71,7 +69,31 @@ export default function RootLayout() {
           width: 280,
         },
       }}
-    />
+    >
+      <Drawer.Screen
+        name="index"
+        options={{
+          headerTitle: 'VELA',
+          headerTitleStyle: {
+            fontWeight: '900',
+            letterSpacing: 3,
+            color: '#818cf8',
+            fontSize: 16,
+          }
+        }}
+      />
+      <Drawer.Screen
+        name="settings"
+        options={{
+          headerTitle: 'Settings',
+          headerTitleStyle: {
+            fontWeight: '600',
+            color: '#e4e4e7',
+            fontSize: 16,
+          }
+        }}
+      />
+    </Drawer>
   );
 }
 
