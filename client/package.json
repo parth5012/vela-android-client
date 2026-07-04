@@ -6,6 +6,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/drawer": "^7.12.6",
     "expo": "~57.0.2",
+    "expo-linking": "~57.0.1",
     "expo-router": "~57.0.3",
     "expo-secure-store": "~57.0.0",
     "expo-status-bar": "~57.0.0",
