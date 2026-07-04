@@ -42,4 +42,23 @@ describe('useConfigStore', () => {
     expect(clearedState.apiKey).toBe('');
     expect(clearedState.isConfigured).toBe(false);
   });
+
+  it('should store apiKey securely in SecureStore and strip it from AsyncStorage', async () => {
+    const state = useConfigStore.getState();
+    state.setConfig('https://api.vela.local', 'my-secret-key');
+
+    // Allow async persistence storage calls to complete
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Verify SecureStore has the token
+    expect(mockSecureStore['vela-api-key']).toBe('my-secret-key');
+
+    // Verify AsyncStorage has the structure but key is stripped
+    const AsyncStorage = require('@react-native-async-storage/async-storage');
+    const asyncStorageVal = await AsyncStorage.getItem('vela-config-storage');
+    expect(asyncStorageVal).not.toBeNull();
+    const parsed = JSON.parse(asyncStorageVal);
+    expect(parsed.state.apiKey).toBe('');
+    expect(parsed.state.apiUrl).toBe('https://api.vela.local');
+  });
 });
