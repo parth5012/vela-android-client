@@ -29,6 +29,11 @@ describe('useChatStore', () => {
     // 2. Add message to thread
     store.addMessage('test-uuid-1', { id: 'msg1', role: 'user', content: 'hello' });
     expect(useChatStore.getState().messages['test-uuid-1'].length).toBe(1);
+    expect(useChatStore.getState().threads.map((t) => t.id)).toEqual([
+      'test-uuid-1',
+      'test-uuid-3',
+      'test-uuid-2',
+    ]);
 
     // 3. Select thread
     store.selectThread('test-uuid-2');
@@ -37,20 +42,20 @@ describe('useChatStore', () => {
     // 4. Delete active thread
     store.deleteThread('test-uuid-2');
     expect(useChatStore.getState().threads.map((t) => t.id)).toEqual([
-      'test-uuid-3',
       'test-uuid-1',
+      'test-uuid-3',
     ]);
-    // Active thread should shift to first in list ('test-uuid-3')
-    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-3');
+    // Active thread should shift to first in list ('test-uuid-1')
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-1');
 
     // 5. Delete inactive thread
-    store.deleteThread('test-uuid-1');
+    store.deleteThread('test-uuid-3');
     // Active thread should remain unchanged
-    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-3');
-    expect(useChatStore.getState().messages['test-uuid-1']).toBeUndefined();
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-1');
+    expect(useChatStore.getState().messages['test-uuid-3']).toBeUndefined();
 
     // 6. Delete last remaining thread
-    store.deleteThread('test-uuid-3');
+    store.deleteThread('test-uuid-1');
     expect(useChatStore.getState().threads.length).toBe(0);
     expect(useChatStore.getState().activeThreadId).toBeNull();
   });

@@ -55,8 +55,19 @@ export const useChatStore = create<ChatState>()(
       }),
       addMessage: (threadId, message) => set((state) => {
         const current = state.messages[threadId] || [];
+        const threadIndex = state.threads.findIndex(t => t.id === threadId);
+        let updatedThreads = [...state.threads];
+        if (threadIndex !== -1) {
+          const updatedThread = {
+            ...updatedThreads[threadIndex],
+            updated_at: new Date().toISOString()
+          };
+          updatedThreads.splice(threadIndex, 1);
+          updatedThreads = [updatedThread, ...updatedThreads];
+        }
         return {
-          messages: { ...state.messages, [threadId]: [...current, message] }
+          messages: { ...state.messages, [threadId]: [...current, message] },
+          threads: updatedThreads
         };
       }),
       appendToken: (threadId, token) => set((state) => {
