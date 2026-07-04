@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-router';
+import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
+import { Drawer } from 'expo-router/drawer';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
+import DrawerContent from '../components/ui/DrawerContent';
 import { Platform } from 'react-native';
 
 if (Platform.OS !== 'web') {
@@ -41,7 +43,36 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  // If we are in the setup screen, render it directly without the Drawer UI
+  if (inSetupGroup) {
+    const { Slot } = require('expo-router');
+    return <Slot />;
+  }
+
+  return (
+    <Drawer
+      drawerContent={() => <DrawerContent />}
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#09090b',
+          shadowColor: 'transparent',
+          elevation: 0,
+        },
+        headerTitle: 'VELA',
+        headerTitleStyle: {
+          fontWeight: '900',
+          letterSpacing: 3,
+          color: '#818cf8',
+          fontSize: 16,
+        },
+        headerTintColor: '#e4e4e7',
+        drawerStyle: {
+          backgroundColor: '#09090b',
+          width: 280,
+        },
+      }}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

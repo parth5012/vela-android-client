@@ -1,51 +1,208 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Keyboard,
+} from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
+import { useChatStore, Message } from '../store/useChatStore';
+import RichText from '../components/chat/RichText';
+import { streamAgentResponse } from '../utils/sse';
 
-export default function HomeScreen() {
-  const { apiUrl, apiKey, clearConfig } = useConfigStore();
+const generateId = (prefix: string) => {
+  return prefix + '_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+};
+
+export default function ChatScreen() {
+  const { apiUrl, apiKey } = useConfigStore();
+  const {
+    threads,
+    activeThreadId,
+    messages,
+    isStreaming,
+    createThread,
+    addMessage,
+    appendToken,
+    setThreads,
+    setStreaming,
+  } = useChatStore();
+
+  const [input, setInput] = useState('');
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const flatListRef = useRef<FlatList>(null);
+
+  const activeMessages = activeThreadId ? messages[activeThreadId] || [] : [];
+
+  // Scroll to bottom on new messages if auto scroll is enabled
+  useEffect(() => {
+    if (shouldAutoScroll && activeMessages.length > 0) {
+      // Small timeout to allow Layout to calculate sizes
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeMessages.length, shouldAutoScroll]);
+
+  // Handle stream auto scrolls
+  useEffect(() => {
+    if (isStreaming && shouldAutoScroll) {
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }
+  }, [activeMessages, isStreaming, shouldAutoScroll]);
+
+  const handleSend = async () => {
+    if (!input.trim() || !activeThreadId || isStreaming) return;
+    Keyboard.dismiss();
+
+    const userText = input.trim();
+    setInput('');
+
+    const userMsgId = generateId('msg_user');
+    const assistantMsgId = generateId('msg_assistant');
+
+    // 1. Add user message
+    addMessage(activeThreadId, {
+      id: userMsgId,
+      role: 'user',
+      content: userText,
+    });
+
+    // 2. Add empty assistant message for streaming
+    addMessage(activeThreadId, {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+    });
+
+    setStreaming(true);
+
+    // 3. Connect to backend stream
+    await streamAgentResponse(
+      apiUrl,
+      apiKey,
+      activeThreadId,
+      userText,
+      (chunk) => {
+        appendToken(activeThreadId, chunk);
+      },
+      (newTitle) => {
+        setStreaming(false);
+        if (newTitle) {
+          // Update thread title
+          const updatedThreads = threads.map((t) =>
+            t.id === activeThreadId ? { ...t, title: newTitle } : t
+          );
+          setThreads(updatedThreads);
+        }
+      },
+      (error) => {
+        setStreaming(false);
+        appendToken(
+          activeThreadId,
+          `\n\n⚠️ **Error:** ${error.message || 'Failed to stream response.'}`
+        );
+      }
+    );
+  };
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 60;
+    const isNearBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+    setShouldAutoScroll(isNearBottom);
+  };
+
+  const handleStartConversation = () => {
+    const newId = 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+    createThread('New Conversation', newId);
+  };
+
+  if (!activeThreadId || threads.length === 0) {
+    return (
+      <View style={styles.welcomeContainer}>
+        <View style={styles.welcomeContent}>
+          <Text style={styles.welcomeLogo}>VELA</Text>
+          <Text style={styles.welcomeTitle}>Welcome to Vela</Text>
+          <Text style={styles.welcomeSubtitle}>
+            Your localized autonomous research agent node. Ready to analyze code, write equations, and execute pipelines.
+          </Text>
+          <Pressable style={styles.welcomeButton} onPress={handleStartConversation}>
+            <Text style={styles.welcomeButtonText}>Start a Conversation</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  const renderItem = ({ item }: { item: Message }) => {
+    const isUser = item.role === 'user';
+    return (
+      <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+          <Text style={styles.senderLabel}>{isUser ? 'User' : 'Vela Agent'}</Text>
+          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1].id === item.id ? (
+            <ActivityIndicator size="small" color="#818cf8" style={styles.loader} />
+          ) : (
+            <RichText content={item.content} />
+          )}
+        </View>
+      </View>
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.logo}>VELA</Text>
-        <Text style={styles.title}>Vela Dashboard</Text>
-        <Text style={styles.subtitle}>Welcome to your private agent node</Text>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Connection Info</Text>
-          <View style={styles.badge}>
-            <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>Active</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      style={styles.container}
+    >
+      <FlatList
+        ref={flatListRef}
+        data={activeMessages}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Text style={styles.emptyText}>Thread initialized. Say hello to get started.</Text>
           </View>
-        </View>
+        }
+      />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Endpoint URL</Text>
-          <Text style={styles.value} numberOfLines={1}>
-            {apiUrl}
-          </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Access Token</Text>
-          <Text style={styles.value}>
-            ••••••••••••{apiKey.slice(-4)}
-          </Text>
-        </View>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Ask a question or request a task..."
+          placeholderTextColor="#71717a"
+          value={input}
+          onChangeText={setInput}
+          multiline
+          editable={!isStreaming}
+        />
+        <Pressable
+          style={({ pressed }) => [
+            styles.sendButton,
+            (!input.trim() || isStreaming) && styles.sendButtonDisabled,
+            pressed && styles.sendButtonPressed,
+          ]}
+          onPress={handleSend}
+          disabled={!input.trim() || isStreaming}
+        >
+          <Text style={styles.sendButtonText}>Send</Text>
+        </Pressable>
       </View>
-
-      <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-        onPress={clearConfig}
-      >
-        <Text style={styles.buttonText}>Reset Server Connection</Text>
-      </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -53,110 +210,141 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#09090b',
-    padding: 24,
-    justifyContent: 'center',
   },
-  headerContainer: {
+  listContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  welcomeContainer: {
+    flex: 1,
+    backgroundColor: '#09090b',
     alignItems: 'center',
-    marginBottom: 40,
+    justifyContent: 'center',
+    padding: 24,
   },
-  logo: {
-    fontSize: 20,
+  welcomeContent: {
+    alignItems: 'center',
+    maxWidth: 400,
+  },
+  welcomeLogo: {
+    fontSize: 32,
     fontWeight: '900',
     color: '#818cf8',
-    letterSpacing: 4,
-    marginBottom: 8,
+    letterSpacing: 6,
+    marginBottom: 24,
   },
-  title: {
-    fontSize: 28,
+  welcomeTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#f4f4f5',
-    marginBottom: 4,
+    marginBottom: 12,
   },
-  subtitle: {
+  welcomeSubtitle: {
     fontSize: 14,
     color: '#a1a1aa',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  card: {
+  welcomeButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+  },
+  welcomeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  messageRow: {
+    flexDirection: 'row',
+    marginVertical: 8,
+    alignSelf: 'stretch',
+  },
+  userRow: {
+    justifyContent: 'flex-end',
+  },
+  assistantRow: {
+    justifyContent: 'flex-start',
+  },
+  bubble: {
+    maxWidth: '85%',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+  },
+  userBubble: {
     backgroundColor: '#18181b',
     borderColor: '#27272a',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    borderTopRightRadius: 4,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+  assistantBubble: {
+    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderTopLeftRadius: 4,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f4f4f5',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
-    marginRight: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#10b981',
-    textTransform: 'uppercase',
-  },
-  infoRow: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
+  senderLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
     color: '#71717a',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  value: {
-    fontSize: 15,
-    color: '#e4e4e7',
-    fontWeight: '500',
+  loader: {
+    marginVertical: 4,
+    alignSelf: 'flex-start',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#27272a',
-    marginVertical: 12,
-  },
-  button: {
-    backgroundColor: '#ef4444',
-    borderRadius: 8,
-    paddingVertical: 14,
+  emptyChat: {
+    paddingVertical: 40,
     alignItems: 'center',
+  },
+  emptyText: {
+    color: '#52525b',
+    fontSize: 14,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#18181b',
+    backgroundColor: '#09090b',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 12,
+    color: '#f4f4f5',
+    fontSize: 15,
+    marginRight: 12,
+    maxHeight: 100,
+  },
+  sendButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    height: 48,
     justifyContent: 'center',
   },
-  buttonPressed: {
-    backgroundColor: '#dc2626',
+  sendButtonPressed: {
+    backgroundColor: '#4f46e5',
   },
-  buttonText: {
+  sendButtonDisabled: {
+    backgroundColor: '#3f3f46',
+    opacity: 0.5,
+  },
+  sendButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/drawer": "^7.12.6",
     "expo": "~57.0.2",
     "expo-router": "~57.0.3",
     "expo-secure-store": "~57.0.0",
@@ -13,6 +14,7 @@
     "react-native-fetch-api": "^3.0.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-markdown-display": "^7.0.2",
+    "react-native-reanimated": "^4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
     "react-native-webview": "13.16.1",
