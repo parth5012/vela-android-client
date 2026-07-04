@@ -1,0 +1,28 @@
+
+
+keytool -genkey -v -keystore temp.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+java -jar bundletool-all-1.18.3.jar build-apks --bundle=app.aab --output=app.apks --mode=universal --ks=temp.keystore --ks-pass=pass:android --ks-key-alias=androiddebugkey --key-pass=pass:android
+
+For installing the APK on your own phone for
+  testing, the signature does not matter. You don't
+  need your production passwords. You can sign the
+  AAB using a dummy key with the password  android .
+
+  Run this in your terminal:
+
+    # 1. Generate a temporary key named "temp.
+  keystore"
+    keytool -genkey -v -keystore temp.keystore -
+  storepass android -alias androiddebugkey -keypass
+  android -keyalg RSA -keysize 2048 -validity 10000
+  -dname "CN=Android Debug,O=Android,C=US"
+
+    # 2. Run bundletool using that temporary key
+    java -jar bundletool-all-1.18.3.jar build-apks -
+  -bundle=app.aab --output=app.apks --mode=universal
+  --ks=temp.keystore --ks-pass=pass:android --ks-
+  key-alias=androiddebugkey --key-pass=pass:android
+
+  Once done, rename  app.apks  to  app.zip , extract
+  it, and install the  universal.apk .
