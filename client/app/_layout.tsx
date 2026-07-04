@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
+import { Platform } from 'react-native';
+
+if (Platform.OS !== 'web') {
+  const { fetch: polyfilledFetch } = require('react-native-fetch-api');
+  (globalThis as any).fetch = polyfilledFetch;
+}
 
 export default function RootLayout() {
   const isConfigured = useConfigStore((state) => state.isConfigured);

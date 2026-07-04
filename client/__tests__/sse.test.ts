@@ -139,4 +139,48 @@ describe('streamAgentResponse', () => {
     expect(errorOccurred).toBe(true);
     expect(errorMessage).toBe('The user aborted a request.');
   });
+
+  it('should process non-newline-terminated final chunk in buffer when stream ends', async () => {
+    const chunks: string[] = [];
+    let completed = false;
+    let title = '';
+
+    (globalThis as any).fetch = jest.fn().mockImplementation(() => {
+      const mockStream = {
+        getReader() {
+          let count = 0;
+          return {
+            async read() {
+              if (count === 0) {
+                count++;
+                return { value: new TextEncoder().encode('data: {"type": "content", "delta": "Hello"}\n'), done: false };
+              } else if (count === 1) {
+                count++;
+                return { value: new TextEncoder().encode('data: {"type": "done", "thread_title": "Finished"}'), done: false };
+              }
+              return { value: undefined, done: true };
+            }
+          };
+        }
+      };
+      return Promise.resolve({
+        ok: true,
+        body: mockStream
+      });
+    });
+
+    await streamAgentResponse(
+      'http://localhost',
+      'key',
+      'thread-1',
+      'hi',
+      (chunk) => chunks.push(chunk),
+      (t) => { completed = true; title = t || ''; },
+      () => {}
+    );
+
+    expect(chunks).toEqual(['Hello']);
+    expect(completed).toBe(true);
+    expect(title).toBe('Finished');
+  });
 });

@@ -34,7 +34,23 @@ export async function streamAgentResponse(
     let buffer = '';
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        const cleaned = buffer.trim();
+        if (cleaned.startsWith('data: ')) {
+          const rawData = cleaned.slice(6);
+          try {
+            const parsed = JSON.parse(rawData);
+            if (parsed.type === 'content') {
+              onChunk(parsed.delta);
+            } else if (parsed.type === 'done') {
+              onDone(parsed.thread_title);
+            }
+          } catch {
+            // Ignore malformed JSON
+          }
+        }
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
