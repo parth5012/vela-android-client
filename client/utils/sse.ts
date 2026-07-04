@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export async function streamAgentResponse(
   url: string,
   apiKey: string,
@@ -9,7 +11,11 @@ export async function streamAgentResponse(
   signal?: AbortSignal
 ) {
   try {
-    const response = await fetch(`${url}/chat/message`, {
+    const sseFetch = Platform.OS !== 'web' && process.env.NODE_ENV !== 'test'
+      ? require('react-native-fetch-api').fetch
+      : fetch;
+
+    const response = await sseFetch(`${url}/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

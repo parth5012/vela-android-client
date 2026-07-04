@@ -1,0 +1,268 @@
+{
+  "communities": {
+    "0": [
+      "app_index",
+      "app_index_chatscreen",
+      "app_index_generateid",
+      "app_index_styles",
+      "app_layout",
+      "app_layout_rootlayout",
+      "app_layout_styles",
+      "app_settings",
+      "app_settings_settingsscreen",
+      "app_settings_styles",
+      "app_setup",
+      "app_setup_setupscreen",
+      "app_setup_styles",
+      "components_ui_drawercontent",
+      "components_ui_drawercontent_drawercontent",
+      "components_ui_drawercontent_generateid",
+      "components_ui_drawercontent_styles",
+      "store_usechatstore",
+      "store_usechatstore_chatstate",
+      "store_usechatstore_message",
+      "store_usechatstore_thread",
+      "store_usechatstore_usechatstore",
+      "store_useconfigstore",
+      "store_useconfigstore_configstate",
+      "store_useconfigstore_secureconfigstorage",
+      "store_useconfigstore_useconfigstore",
+      "utils_sse",
+      "utils_sse_streamagentresponse"
+    ],
+    "1": [
+      "package_dependencies",
+      "package_dependencies_expo",
+      "package_dependencies_expo_linking",
+      "package_dependencies_expo_router",
+      "package_dependencies_expo_secure_store",
+      "package_dependencies_expo_status_bar",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_native",
+      "package_dependencies_react_native_async_storage_async_storage",
+      "package_dependencies_react_native_fetch_api",
+      "package_dependencies_react_native_gesture_handler",
+      "package_dependencies_react_native_markdown_display",
+      "package_dependencies_react_native_reanimated",
+      "package_dependencies_react_native_safe_area_context",
+      "package_dependencies_react_native_screens",
+      "package_dependencies_react_native_web",
+      "package_dependencies_react_native_webview",
+      "package_dependencies_react_native_worklets",
+      "package_dependencies_react_navigation_drawer",
+      "package_dependencies_zustand"
+    ],
+    "2": [
+      "app",
+      "app_eas_projectid",
+      "app_expo",
+      "app_expo_extra",
+      "app_expo_icon",
+      "app_expo_name",
+      "app_expo_orientation",
+      "app_expo_plugins",
+      "app_expo_scheme",
+      "app_expo_slug",
+      "app_expo_userinterfacestyle",
+      "app_expo_version",
+      "app_expo_web",
+      "app_extra_eas",
+      "app_extra_router",
+      "app_web_favicon"
+    ],
+    "3": [
+      "package",
+      "package_jest",
+      "package_jest_preset",
+      "package_jest_transformignorepatterns",
+      "package_main",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_android",
+      "package_scripts_ios",
+      "package_scripts_start",
+      "package_scripts_test",
+      "package_scripts_web",
+      "package_version"
+    ],
+    "4": [
+      "components_chat_latexrenderer",
+      "components_chat_latexrenderer_latexrenderer",
+      "components_chat_latexrenderer_latexrendererprops",
+      "components_chat_latexrenderer_styles",
+      "components_chat_richtext",
+      "components_chat_richtext_markdownstyles",
+      "components_chat_richtext_richtext",
+      "components_chat_richtext_richtextprops",
+      "components_chat_richtext_styles",
+      "utils_latexextractor",
+      "utils_latexextractor_contentsegment",
+      "utils_latexextractor_parsecontent"
+    ],
+    "5": [
+      "app_adaptiveicon_backgroundcolor",
+      "app_adaptiveicon_backgroundimage",
+      "app_adaptiveicon_foregroundimage",
+      "app_adaptiveicon_monochromeimage",
+      "app_android_adaptiveicon",
+      "app_android_package",
+      "app_android_predictivebackgestureenabled",
+      "app_expo_android"
+    ],
+    "6": [
+      "package_devdependencies",
+      "package_devdependencies_jest",
+      "package_devdependencies_jest_expo",
+      "package_devdependencies_react_native_jest_preset",
+      "package_devdependencies_react_test_renderer",
+      "package_devdependencies_types_jest",
+      "package_devdependencies_types_react",
+      "package_devdependencies_typescript"
+    ],
+    "7": [
+      "app_expo_ios",
+      "app_infoplist_itsappusesnonexemptencryption",
+      "app_ios_bundleidentifier",
+      "app_ios_infoplist",
+      "app_ios_supportstablet"
+    ],
+    "8": [
+      "tsconfig",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_compileroptions_types",
+      "tsconfig_extends"
+    ],
+    "9": [
+      "abc",
+      "abc_formattedurl"
+    ]
+  },
+  "cohesion": {
+    "0": 0.12698412698412698,
+    "1": 0.09523809523809523,
+    "2": 0.125,
+    "3": 0.14285714285714285,
+    "4": 0.19696969696969696,
+    "5": 0.25,
+    "6": 0.25,
+    "7": 0.4,
+    "8": 0.4,
+    "9": 1.0
+  },
+  "gods": [
+    {
+      "id": "app_expo",
+      "label": "expo",
+      "degree": 13
+    },
+    {
+      "id": "store_useconfigstore_useconfigstore",
+      "label": "useConfigStore",
+      "degree": 11
+    },
+    {
+      "id": "store_usechatstore_usechatstore",
+      "label": "useChatStore",
+      "degree": 7
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 6
+    },
+    {
+      "id": "app_android_adaptiveicon",
+      "label": "adaptiveIcon",
+      "degree": 5
+    },
+    {
+      "id": "app_expo_ios",
+      "label": "ios",
+      "degree": 4
+    },
+    {
+      "id": "app_expo_android",
+      "label": "android",
+      "degree": 4
+    },
+    {
+      "id": "app_expo_extra",
+      "label": "extra",
+      "degree": 3
+    },
+    {
+      "id": "app_index_chatscreen",
+      "label": "ChatScreen()",
+      "degree": 3
+    },
+    {
+      "id": "app_settings_settingsscreen",
+      "label": "SettingsScreen()",
+      "degree": 3
+    }
+  ],
+  "surprises": [
+    {
+      "source": "RootLayout()",
+      "target": "useConfigStore",
+      "source_files": [
+        "app/_layout.tsx",
+        "store/useConfigStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `RootLayout()` unexpectedly reaches hub `useConfigStore`"
+    },
+    {
+      "source": "SetupScreen()",
+      "target": "useConfigStore",
+      "source_files": [
+        "app/setup.tsx",
+        "store/useConfigStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `SetupScreen()` unexpectedly reaches hub `useConfigStore`"
+    },
+    {
+      "source": "ChatScreen()",
+      "target": "useChatStore",
+      "source_files": [
+        "app/index.tsx",
+        "store/useChatStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "ChatScreen()",
+      "target": "useConfigStore",
+      "source_files": [
+        "app/index.tsx",
+        "store/useConfigStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "SettingsScreen()",
+      "target": "useChatStore",
+      "source_files": [
+        "app/settings.tsx",
+        "store/useChatStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

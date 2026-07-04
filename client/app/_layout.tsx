@@ -6,10 +6,7 @@ import { useConfigStore } from '../store/useConfigStore';
 import DrawerContent from '../components/ui/DrawerContent';
 import { Platform } from 'react-native';
 
-if (Platform.OS !== 'web') {
-  const { fetch: polyfilledFetch } = require('react-native-fetch-api');
-  (globalThis as any).fetch = polyfilledFetch;
-}
+
 
 export default function RootLayout() {
   const isConfigured = useConfigStore((state) => state.isConfigured);

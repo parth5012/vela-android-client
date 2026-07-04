@@ -62,7 +62,6 @@ export default function SetupScreen() {
 
       if (response.ok) {
         setConfig(formattedUrl, apiKey.trim());
-        router.replace('/');
       } else {
         setError(`Failed to connect. Server returned status: ${response.status}`);
       }

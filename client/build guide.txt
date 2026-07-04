@@ -19,10 +19,7 @@ For installing the APK on your own phone for
   -dname "CN=Android Debug,O=Android,C=US"
 
     # 2. Run bundletool using that temporary key
-    java -jar bundletool-all-1.18.3.jar build-apks -
-  -bundle=app.aab --output=app.apks --mode=universal
-  --ks=temp.keystore --ks-pass=pass:android --ks-
-  key-alias=androiddebugkey --key-pass=pass:android
+    java -jar bundletool-all-1.18.3.jar build-apks --bundle=app.aab --output=app.apks --mode=universal --ks=temp.keystore --ks-pass=pass:android --ks-key-alias=androiddebugkey --key-pass=pass:android
 
   Once done, rename  app.apks  to  app.zip , extract
   it, and install the  universal.apk .
