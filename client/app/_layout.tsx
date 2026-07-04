@@ -25,7 +25,9 @@ export default function RootLayout() {
     }
   }, [isConfigured, hasHydrated, isRouterReady, segments]);
 
-  if (!hasHydrated || !isRouterReady) {
+  const inSetupGroup = segments[0] === 'setup';
+
+  if (!hasHydrated || !isRouterReady || (!isConfigured && !inSetupGroup) || (isConfigured && inSetupGroup)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#818cf8" />

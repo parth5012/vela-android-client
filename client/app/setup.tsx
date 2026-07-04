@@ -37,7 +37,7 @@ export default function SetupScreen() {
 
     let formattedUrl = apiUrl.trim();
     if (!/^https?:\/\//i.test(formattedUrl)) {
-      formattedUrl = 'http://' + formattedUrl;
+      formattedUrl = 'https://' + formattedUrl;
     }
     // Remove trailing slashes
     formattedUrl = formattedUrl.replace(/\/+$/, '');
@@ -60,7 +60,7 @@ export default function SetupScreen() {
 
       clearTimeout(timeoutId);
 
-      if (response.status === 200) {
+      if (response.ok) {
         setConfig(formattedUrl, apiKey.trim());
         router.replace('/');
       } else {
