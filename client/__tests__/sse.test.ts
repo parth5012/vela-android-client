@@ -110,4 +110,33 @@ describe('streamAgentResponse', () => {
     expect(errorOccurred).toBe(true);
     expect(errorMessage).toBe('Response body is not readable');
   });
+
+  it('should handle network aborts by triggering onError', async () => {
+    let errorOccurred = false;
+    let errorMessage = '';
+
+    (globalThis as any).fetch = jest.fn().mockImplementation(() => {
+      return Promise.reject(new DOMException('The user aborted a request.', 'AbortError'));
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await streamAgentResponse(
+      'http://localhost',
+      'key',
+      'thread-1',
+      'hi',
+      () => {},
+      () => {},
+      (err) => {
+        errorOccurred = true;
+        errorMessage = err.message;
+      },
+      controller.signal
+    );
+
+    expect(errorOccurred).toBe(true);
+    expect(errorMessage).toBe('The user aborted a request.');
+  });
 });

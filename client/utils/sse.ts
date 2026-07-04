@@ -5,7 +5,8 @@ export async function streamAgentResponse(
   message: string,
   onChunk: (chunk: string) => void,
   onDone: (newTitle?: string) => void,
-  onError: (error: Error) => void
+  onError: (error: Error) => void,
+  signal?: AbortSignal
 ) {
   try {
     const response = await fetch(`${url}/chat/message`, {
@@ -16,6 +17,7 @@ export async function streamAgentResponse(
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify({ thread_id: threadId, message }),
+      signal,
     });
 
     if (!response.ok) {
