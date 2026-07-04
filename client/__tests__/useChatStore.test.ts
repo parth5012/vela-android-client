@@ -9,21 +9,48 @@ describe('useChatStore', () => {
     useChatStore.getState().clearStore();
   });
 
-  it('should handle creating, selecting, and deleting threads', () => {
+  it('should handle creating, selecting, and deleting threads with correct fallback active selection', () => {
     const store = useChatStore.getState();
     expect(store.threads.length).toBe(0);
 
-    // 1. Create thread
+    // 1. Create multiple threads
     store.createThread('Thread 1', 'test-uuid-1');
-    expect(useChatStore.getState().threads.length).toBe(1);
-    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-1');
+    store.createThread('Thread 2', 'test-uuid-2');
+    store.createThread('Thread 3', 'test-uuid-3');
+    
+    // Active thread should be the most recently created one (which is prepended)
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-3');
+    expect(useChatStore.getState().threads.map((t) => t.id)).toEqual([
+      'test-uuid-3',
+      'test-uuid-2',
+      'test-uuid-1',
+    ]);
 
     // 2. Add message to thread
     store.addMessage('test-uuid-1', { id: 'msg1', role: 'user', content: 'hello' });
     expect(useChatStore.getState().messages['test-uuid-1'].length).toBe(1);
 
-    // 3. Delete thread
+    // 3. Select thread
+    store.selectThread('test-uuid-2');
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-2');
+
+    // 4. Delete active thread
+    store.deleteThread('test-uuid-2');
+    expect(useChatStore.getState().threads.map((t) => t.id)).toEqual([
+      'test-uuid-3',
+      'test-uuid-1',
+    ]);
+    // Active thread should shift to first in list ('test-uuid-3')
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-3');
+
+    // 5. Delete inactive thread
     store.deleteThread('test-uuid-1');
+    // Active thread should remain unchanged
+    expect(useChatStore.getState().activeThreadId).toBe('test-uuid-3');
+    expect(useChatStore.getState().messages['test-uuid-1']).toBeUndefined();
+
+    // 6. Delete last remaining thread
+    store.deleteThread('test-uuid-3');
     expect(useChatStore.getState().threads.length).toBe(0);
     expect(useChatStore.getState().activeThreadId).toBeNull();
   });
