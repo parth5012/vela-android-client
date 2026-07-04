@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+/**
+ * NOTE ON NETWORK DEPENDENCY:
+ * This component retrieves KaTeX assets (stylesheets and JS script) from a public CDN.
+ * This is a reasonable trade-off because the Vela application is inherently online-only,
+ * requiring constant internet connectivity to sync and communicate with a hosted remote
+ * FastAPI backend node. Loading KaTeX from CDN keeps the native application binary lightweight.
+ */
 interface LatexRendererProps {
   formula: string;
   displayMode?: boolean;

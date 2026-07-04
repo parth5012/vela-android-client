@@ -39,4 +39,11 @@ describe('latexExtractor', () => {
     expect(segments.length).toBe(1);
     expect(segments[0]).toEqual({ type: 'latex-inline', content: 'E = mc^2' });
   });
+
+  it('should not parse currency values as LaTeX inline formulas', () => {
+    const text = 'I have $10 and my friend has $20';
+    const segments = parseContent(text);
+    expect(segments.length).toBe(1);
+    expect(segments[0]).toEqual({ type: 'markdown', content: text });
+  });
 });

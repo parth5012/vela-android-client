@@ -6,8 +6,8 @@ export interface ContentSegment {
 export function parseContent(text: string): ContentSegment[] {
   if (!text) return [];
   
-  // Match block math $$...$$ and inline math $...$ (avoiding empty $)
-  const regex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g;
+  // Match block math $$...$$ and inline math $...$ (avoiding normal currency and empty $)
+  const regex = /(\$\$[\s\S]*?\$\$|\$(?!\s)[^\$\n]*?[^\s\$]\$(?!\d))/g;
   const parts = text.split(regex);
   
   return parts.map(part => {
