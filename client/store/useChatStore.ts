@@ -3,6 +3,14 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useConfigStore } from './useConfigStore';
 
+const normalizeUrl = (url: string): string => {
+  let formattedUrl = url.trim();
+  if (!/^https?:\/\//i.test(formattedUrl)) {
+    formattedUrl = 'https://' + formattedUrl;
+  }
+  return formattedUrl.replace(/\/+$/, '');
+};
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -53,16 +61,16 @@ export const useChatStore = create<ChatState>()(
       deleteThread: (id) => {
         const config = useConfigStore.getState();
         if (config.apiUrl && config.apiKey) {
-          let formattedUrl = config.apiUrl.trim();
-          if (!/^https?:\/\//i.test(formattedUrl)) {
-            formattedUrl = 'https://' + formattedUrl;
-          }
-          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          const formattedUrl = normalizeUrl(config.apiUrl);
           fetch(`${formattedUrl}/chat/threads/${id}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${config.apiKey.trim()}`,
             },
+          }).then((res) => {
+            if (!res.ok) {
+              console.error(`[deleteThread] Failed to delete on backend, status: ${res.status}`);
+            }
           }).catch((err) => console.error('[deleteThread] Failed to delete on backend:', err));
         }
 
@@ -122,13 +130,9 @@ export const useChatStore = create<ChatState>()(
       branchThread: async (parentThreadId, uptoMessageId, newThreadId, title) => {
         const config = useConfigStore.getState();
         if (config.apiUrl && config.apiKey) {
-          let formattedUrl = config.apiUrl.trim();
-          if (!/^https?:\/\//i.test(formattedUrl)) {
-            formattedUrl = 'https://' + formattedUrl;
-          }
-          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          const formattedUrl = normalizeUrl(config.apiUrl);
           try {
-            await fetch(`${formattedUrl}/chat/threads/branch`, {
+            const res = await fetch(`${formattedUrl}/chat/threads/branch`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${config.apiKey.trim()}`,
@@ -141,6 +145,9 @@ export const useChatStore = create<ChatState>()(
                 title: title,
               }),
             });
+            if (!res.ok) {
+              console.error(`[branchThread] Backend branch returned status: ${res.status}`);
+            }
           } catch (err) {
             console.error('[branchThread] Failed to branch on backend:', err);
           }
@@ -171,13 +178,9 @@ export const useChatStore = create<ChatState>()(
       truncateThreadHistory: async (threadId, uptoMessageId) => {
         const config = useConfigStore.getState();
         if (config.apiUrl && config.apiKey) {
-          let formattedUrl = config.apiUrl.trim();
-          if (!/^https?:\/\//i.test(formattedUrl)) {
-            formattedUrl = 'https://' + formattedUrl;
-          }
-          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          const formattedUrl = normalizeUrl(config.apiUrl);
           try {
-            await fetch(`${formattedUrl}/chat/threads/${threadId}/truncate`, {
+            const res = await fetch(`${formattedUrl}/chat/threads/${threadId}/truncate`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${config.apiKey.trim()}`,
@@ -187,6 +190,9 @@ export const useChatStore = create<ChatState>()(
                 upto_message_id: uptoMessageId,
               }),
             });
+            if (!res.ok) {
+              console.error(`[truncateThreadHistory] Backend truncate returned status: ${res.status}`);
+            }
           } catch (err) {
             console.error('[truncateThreadHistory] Failed to truncate on backend:', err);
           }
