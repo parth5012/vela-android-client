@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,28 +35,11 @@ export default function ChatScreen() {
   } = useChatStore();
 
   const [input, setInput] = useState('');
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
 
   const activeMessages = activeThreadId ? messages[activeThreadId] || [] : [];
-
-  // Scroll to bottom on new messages if auto scroll is enabled
-  useEffect(() => {
-    if (shouldAutoScroll && activeMessages.length > 0) {
-      // Small timeout to allow Layout to calculate sizes
-      const timer = setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [activeMessages.length, shouldAutoScroll]);
-
-  // Handle stream auto scrolls
-  useEffect(() => {
-    if (isStreaming && shouldAutoScroll) {
-      flatListRef.current?.scrollToEnd({ animated: false });
-    }
-  }, [activeMessages, isStreaming, shouldAutoScroll]);
+  const reversedMessages = useMemo(() => {
+    return [...activeMessages].reverse();
+  }, [activeMessages]);
 
   const handleSend = async () => {
     if (!input.trim() || !activeThreadId || isStreaming) return;
@@ -105,21 +88,15 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
           activeThreadId,
-          `\n\n⚠️ **Error:** ${error.message || 'Failed to stream response.'}`
+          `\n\n⚠️ **Error:** ${errMsg}`
         );
       }
     );
   };
 
-  const handleScroll = (event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 60;
-    const isNearBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-    setShouldAutoScroll(isNearBottom);
-  };
 
   const handleStartConversation = () => {
     const newId = 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
@@ -143,13 +120,13 @@ export default function ChatScreen() {
     );
   }
 
-  const renderItem = ({ item }: { item: Message }) => {
+  const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
     return (
       <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
         <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
           <Text style={styles.senderLabel}>{isUser ? 'User' : 'Vela Agent'}</Text>
-          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1].id === item.id ? (
+          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
             <ActivityIndicator size="small" color="#818cf8" style={styles.loader} />
           ) : (
             <RichText content={item.content} />
@@ -157,7 +134,7 @@ export default function ChatScreen() {
         </View>
       </View>
     );
-  };
+  }, [isStreaming, activeMessages]);
 
   return (
     <KeyboardAvoidingView
@@ -166,15 +143,14 @@ export default function ChatScreen() {
       style={styles.container}
     >
       <FlatList
-        ref={flatListRef}
-        data={activeMessages}
+        data={reversedMessages}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        inverted={true}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View style={styles.emptyChat}>
+          <View style={[styles.emptyChat, { transform: [{ scaleY: -1 }] }]}>
             <Text style={styles.emptyText}>Thread initialized. Say hello to get started.</Text>
           </View>
         }
