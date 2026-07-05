@@ -49,4 +49,4 @@ app-release/
 __tests__/
 .agents/
 credentials/
-.claude
+.claude/
