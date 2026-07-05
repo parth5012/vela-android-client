@@ -13,6 +13,7 @@ export interface Thread {
   id: string;
   title: string;
   updated_at: string;
+  is_pinned?: boolean;
 }
 
 interface ChatState {
@@ -23,6 +24,8 @@ interface ChatState {
   createThread: (title: string, id: string) => void;
   selectThread: (id: string) => void;
   deleteThread: (id: string) => void;
+  renameThread: (id: string, newTitle: string) => void;
+  togglePinThread: (id: string) => void;
   addMessage: (threadId: string, message: Message) => void;
   appendToken: (threadId: string, token: string) => void;
   setThreads: (threads: Thread[]) => void;
@@ -84,6 +87,12 @@ export const useChatStore = create<ChatState>()(
           }
         };
       }),
+      renameThread: (id, newTitle) => set((state) => ({
+        threads: state.threads.map((t) => t.id === id ? { ...t, title: newTitle } : t)
+      })),
+      togglePinThread: (id) => set((state) => ({
+        threads: state.threads.map((t) => t.id === id ? { ...t, is_pinned: !t.is_pinned } : t)
+      })),
       setThreads: (threads) => set({ threads }),
       setHistory: (threadId, history) => set((state) => ({
         messages: { ...state.messages, [threadId]: history }

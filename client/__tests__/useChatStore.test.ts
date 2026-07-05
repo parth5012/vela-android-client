@@ -101,4 +101,27 @@ describe('useChatStore', () => {
     store.setThreads(newThreads);
     expect(useChatStore.getState().threads).toEqual(newThreads);
   });
+
+  it('should handle renameThread and togglePinThread', () => {
+    const store = useChatStore.getState();
+    store.createThread('Original Title', 'test-uuid-rename');
+
+    // Verify renaming thread
+    store.renameThread('test-uuid-rename', 'New Title');
+    const thread = useChatStore.getState().threads.find(t => t.id === 'test-uuid-rename');
+    expect(thread?.title).toBe('New Title');
+
+    // Verify toggle pin thread
+    expect(thread?.is_pinned).toBeUndefined();
+
+    // Toggle pin on (should become true)
+    store.togglePinThread('test-uuid-rename');
+    const pinnedThread = useChatStore.getState().threads.find(t => t.id === 'test-uuid-rename');
+    expect(pinnedThread?.is_pinned).toBe(true);
+
+    // Toggle pin off (should become false)
+    store.togglePinThread('test-uuid-rename');
+    const unpinnedThread = useChatStore.getState().threads.find(t => t.id === 'test-uuid-rename');
+    expect(unpinnedThread?.is_pinned).toBe(false);
+  });
 });
