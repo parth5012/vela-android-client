@@ -14,13 +14,7 @@ import { useRouter } from 'expo-router';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore } from '../store/useChatStore';
 import { syncHistoryWithBackend } from '../utils/history';
-
-const ACCENT_COLORS = {
-  indigo: '#6366f1',
-  emerald: '#10b981',
-  rose: '#f43f5e',
-  amber: '#f59e0b',
-};
+import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
 
 const PRESET_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'claude-3-5-sonnet', 'gpt-4o'];
 
@@ -45,6 +39,9 @@ export default function SettingsScreen() {
   } = useConfigStore();
   const { clearStore } = useChatStore();
   const router = useRouter();
+  const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
+  const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
+  const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
 
   const [apiUrl, setApiUrl] = useState(storedUrl);
   const [apiKey, setApiKey] = useState(storedKey);
@@ -144,13 +141,11 @@ export default function SettingsScreen() {
     );
   };
 
-  const activeAccentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
-
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scrollContainer}
     >
       {/* Back Button */}
@@ -158,23 +153,23 @@ export default function SettingsScreen() {
         style={styles.backButton}
         onPress={() => router.navigate('/')}
       >
-        <Text style={styles.backButtonText}>← Back to Chat</Text>
+        <Text style={[styles.backButtonText, { color: accentHex, fontSize: sizes.text }]}>← Back to Chat</Text>
       </Pressable>
 
       {/* Node Configuration Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Node Configuration</Text>
-        <Text style={styles.sectionSubtitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sizes.title }]}>Node Configuration</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.textMuted, fontSize: sizes.text - 1 }]}>
           Update the remote endpoint and auth token used to connect to your Vela FastAPI node.
         </Text>
 
-        <View style={styles.formContainer}>
+        <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Server URL</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Server URL</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
               placeholder="https://api.vela.local"
-              placeholderTextColor="#71717a"
+              placeholderTextColor={colors.textDark}
               value={apiUrl}
               onChangeText={(text) => {
                 setApiUrl(text);
@@ -188,11 +183,11 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>API Access Key</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>API Access Key</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
               placeholder="Enter your API access token"
-              placeholderTextColor="#71717a"
+              placeholderTextColor={colors.textDark}
               value={apiKey}
               onChangeText={(text) => {
                 setApiKey(text);
@@ -211,7 +206,7 @@ export default function SettingsScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.saveButton,
-              { backgroundColor: activeAccentHex },
+              { backgroundColor: accentHex },
               pressed && { opacity: 0.8 },
               isTesting && styles.saveButtonDisabled,
             ]}
@@ -221,7 +216,7 @@ export default function SettingsScreen() {
             {isTesting ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Save & Test Connection</Text>
+              <Text style={[styles.saveButtonText, { fontSize: sizes.text }]}>Save & Test Connection</Text>
             )}
           </Pressable>
         </View>
@@ -229,15 +224,15 @@ export default function SettingsScreen() {
 
       {/* UI & Aesthetics Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>UI & Aesthetics</Text>
-        <Text style={styles.sectionSubtitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sizes.title }]}>UI & Aesthetics</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.textMuted, fontSize: sizes.text - 1 }]}>
           Customize the appearance and layout of the Vela client.
         </Text>
 
-        <View style={styles.formContainer}>
+        <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* App Theme */}
           <View style={styles.controlGroup}>
-            <Text style={styles.label}>App Theme</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>App Theme</Text>
             <View style={styles.row}>
               {(['deep', 'slate', 'cyberpunk'] as const).map((t) => {
                 const isSelected = theme === t;
@@ -246,12 +241,20 @@ export default function SettingsScreen() {
                     key={t}
                     style={[
                       styles.pillButton,
-                      isSelected && { borderColor: activeAccentHex },
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      isSelected && { borderColor: accentHex },
                       isSelected && styles.pillButtonActive,
                     ]}
                     onPress={() => setTheme(t)}
                   >
-                    <Text style={[styles.pillButtonText, isSelected && styles.pillButtonTextActive]}>
+                    <Text 
+                      style={[
+                        styles.pillButtonText, 
+                        { color: colors.textMuted, fontSize: sizes.text - 1 },
+                        isSelected && styles.pillButtonTextActive,
+                        isSelected && { color: colors.text }
+                      ]}
+                    >
                       {t.charAt(0).toUpperCase() + t.slice(1)}
                     </Text>
                   </Pressable>
@@ -262,7 +265,7 @@ export default function SettingsScreen() {
 
           {/* Font Size */}
           <View style={styles.controlGroup}>
-            <Text style={styles.label}>Font Size</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Font Size</Text>
             <View style={styles.row}>
               {(['small', 'medium', 'large'] as const).map((size) => {
                 const isSelected = fontSize === size;
@@ -271,12 +274,20 @@ export default function SettingsScreen() {
                     key={size}
                     style={[
                       styles.pillButton,
-                      isSelected && { borderColor: activeAccentHex },
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      isSelected && { borderColor: accentHex },
                       isSelected && styles.pillButtonActive,
                     ]}
                     onPress={() => setFontSize(size)}
                   >
-                    <Text style={[styles.pillButtonText, isSelected && styles.pillButtonTextActive]}>
+                    <Text 
+                      style={[
+                        styles.pillButtonText, 
+                        { color: colors.textMuted, fontSize: sizes.text - 1 },
+                        isSelected && styles.pillButtonTextActive,
+                        isSelected && { color: colors.text }
+                      ]}
+                    >
                       {size.charAt(0).toUpperCase() + size.slice(1)}
                     </Text>
                   </Pressable>
@@ -287,7 +298,7 @@ export default function SettingsScreen() {
 
           {/* Accent Color */}
           <View style={[styles.controlGroup, { marginBottom: 0 }]}>
-            <Text style={styles.label}>Accent Color</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Accent Color</Text>
             <View style={[styles.row, { gap: 16, marginTop: 8 }]}>
               {(Object.keys(ACCENT_COLORS) as Array<keyof typeof ACCENT_COLORS>).map((color) => {
                 const isSelected = accentColor === color;
@@ -298,7 +309,7 @@ export default function SettingsScreen() {
                     style={[
                       styles.accentDot,
                       { backgroundColor: colorHex },
-                      isSelected && { borderColor: '#ffffff', borderWidth: 2.5 },
+                      isSelected && { borderColor: colors.text, borderWidth: 2.5 },
                     ]}
                     onPress={() => setAccentColor(color)}
                   />
@@ -311,19 +322,19 @@ export default function SettingsScreen() {
 
       {/* Agent Configuration Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Agent Configuration</Text>
-        <Text style={styles.sectionSubtitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sizes.title }]}>Agent Configuration</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.textMuted, fontSize: sizes.text - 1 }]}>
           Configure the behavior, prompts, and model parameters for the Vela research agent.
         </Text>
 
-        <View style={styles.formContainer}>
+        <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Default Model */}
           <View style={styles.controlGroup}>
-            <Text style={styles.label}>Default Model</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Default Model</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
               placeholder="Enter model name (e.g. gemini-1.5-pro)"
-              placeholderTextColor="#71717a"
+              placeholderTextColor={colors.textDark}
               value={modelName}
               onChangeText={setModelName}
               autoCapitalize="none"
@@ -337,12 +348,20 @@ export default function SettingsScreen() {
                     key={model}
                     style={[
                       styles.chip,
-                      isSelected && { borderColor: activeAccentHex, borderWidth: 1 },
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      isSelected && { borderColor: accentHex, borderWidth: 1 },
                       isSelected && styles.chipActive,
                     ]}
                     onPress={() => setModelName(model)}
                   >
-                    <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                    <Text 
+                      style={[
+                        styles.chipText, 
+                        { color: colors.textMuted, fontSize: sizes.text - 2 },
+                        isSelected && styles.chipTextActive,
+                        isSelected && { color: colors.text }
+                      ]}
+                    >
                       {model}
                     </Text>
                   </Pressable>
@@ -353,11 +372,14 @@ export default function SettingsScreen() {
 
           {/* Temperature */}
           <View style={styles.controlGroup}>
-            <Text style={styles.label}>Temperature ({temperature.toFixed(1)})</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>
+              Temperature ({temperature.toFixed(1)})
+            </Text>
             <View style={styles.tempControlRow}>
               <Pressable
                 style={({ pressed }) => [
                   styles.tempStepButton,
+                  { backgroundColor: colors.background, borderColor: colors.border },
                   pressed && styles.tempStepButtonPressed,
                   temperature <= 0 && styles.tempStepButtonDisabled,
                 ]}
@@ -367,16 +389,16 @@ export default function SettingsScreen() {
                 }}
                 disabled={temperature <= 0}
               >
-                <Text style={styles.tempStepButtonText}>-</Text>
+                <Text style={[styles.tempStepButtonText, { color: colors.text, fontSize: sizes.text + 4 }]}>-</Text>
               </Pressable>
 
-              <View style={styles.tempTrackBg}>
+              <View style={[styles.tempTrackBg, { backgroundColor: colors.background, borderColor: colors.border }]}>
                 <View
                   style={[
                     styles.tempTrackFill,
                     {
                       width: `${temperature * 100}%`,
-                      backgroundColor: activeAccentHex,
+                      backgroundColor: accentHex,
                     },
                   ]}
                 />
@@ -385,6 +407,7 @@ export default function SettingsScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.tempStepButton,
+                  { backgroundColor: colors.background, borderColor: colors.border },
                   pressed && styles.tempStepButtonPressed,
                   temperature >= 1.0 && styles.tempStepButtonDisabled,
                 ]}
@@ -394,18 +417,18 @@ export default function SettingsScreen() {
                 }}
                 disabled={temperature >= 1.0}
               >
-                <Text style={styles.tempStepButtonText}>+</Text>
+                <Text style={[styles.tempStepButtonText, { color: colors.text, fontSize: sizes.text + 4 }]}>+</Text>
               </Pressable>
             </View>
           </View>
 
           {/* System Prompt */}
           <View style={[styles.controlGroup, { marginBottom: 0 }]}>
-            <Text style={styles.label}>System Prompt</Text>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>System Prompt</Text>
             <TextInput
-              style={[styles.input, styles.multilineInput]}
+              style={[styles.input, styles.multilineInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
               placeholder="You are an autonomous research agent."
-              placeholderTextColor="#71717a"
+              placeholderTextColor={colors.textDark}
               value={systemPrompt}
               onChangeText={setSystemPrompt}
               multiline
@@ -417,9 +440,9 @@ export default function SettingsScreen() {
       </View>
 
       {/* Danger Zone Section */}
-      <View style={[styles.section, styles.dangerSection]}>
-        <Text style={styles.sectionTitleDanger}>Danger Zone</Text>
-        <Text style={styles.sectionSubtitle}>
+      <View style={[styles.section, styles.dangerSection, { borderTopColor: colors.border }]}>
+        <Text style={[styles.sectionTitleDanger, { fontSize: sizes.title }]}>Danger Zone</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.textMuted, fontSize: sizes.text - 1 }]}>
           Resetting your connection will erase all local settings, threads, and cached chats.
         </Text>
 

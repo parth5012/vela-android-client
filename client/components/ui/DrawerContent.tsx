@@ -11,6 +11,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { useConfigStore } from '../../store/useConfigStore';
 import { useChatStore, Thread } from '../../store/useChatStore';
 import ThreadOptionsModal from './ThreadOptionsModal';
+import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../../utils/theme';
 
 const generateId = () => {
   return 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
@@ -21,9 +22,13 @@ export default function DrawerContent() {
   const activeThreadId = useChatStore((state) => state.activeThreadId);
   const createThread = useChatStore((state) => state.createThread);
   const selectThread = useChatStore((state) => state.selectThread);
-  const { apiUrl } = useConfigStore();
+  const { apiUrl, theme, fontSize, accentColor } = useConfigStore();
   const router = useRouter();
   const navigation = useNavigation<any>();
+
+  const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
+  const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
+  const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
 
   const [optionsVisible, setOptionsVisible] = React.useState(false);
   const [selectedThread, setSelectedThread] = React.useState<Thread | null>(null);
@@ -76,9 +81,9 @@ export default function DrawerContent() {
   }, [threads]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Pressable
-        style={styles.header}
+        style={[styles.header, { borderBottomColor: colors.border }]}
         onPress={() => {
           router.navigate('/');
           if (typeof navigation.closeDrawer === 'function') {
@@ -86,30 +91,38 @@ export default function DrawerContent() {
           }
         }}
       >
-        <Text style={styles.logo}>VELA</Text>
-        <Text style={styles.nodeStatus} numberOfLines={1}>
+        <Text style={[styles.logo, { color: accentHex }]}>VELA</Text>
+        <Text style={[styles.nodeStatus, { color: colors.textDark }]} numberOfLines={1}>
           Node: {apiUrl.replace(/^https?:\/\//, '')}
         </Text>
       </Pressable>
 
       <Pressable
-        style={({ pressed }) => [styles.newChatButton, pressed && styles.newChatButtonPressed]}
+        style={({ pressed }) => [
+          styles.newChatButton, 
+          { backgroundColor: colors.card, borderColor: colors.border },
+          pressed && styles.newChatButtonPressed
+        ]}
         onPress={handleNewChat}
       >
-        <Text style={styles.newChatButtonText}>+ New Conversation</Text>
+        <Text style={[styles.newChatButtonText, { color: colors.text }]}>+ New Conversation</Text>
       </Pressable>
 
       <ScrollView style={styles.threadsContainer} contentContainerStyle={styles.threadsContent}>
-        <Text style={styles.sectionTitle}>Recent Chats</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textDark }]}>Recent Chats</Text>
         {sortedThreads.length === 0 ? (
-          <Text style={styles.emptyText}>No chats yet</Text>
+          <Text style={[styles.emptyText, { color: colors.textDark }]}>No chats yet</Text>
         ) : (
           sortedThreads.map((thread) => {
             const isActive = thread.id === activeThreadId;
             return (
               <Pressable
                 key={thread.id}
-                style={[styles.threadItem, isActive && styles.activeThreadItem]}
+                style={[
+                  styles.threadItem, 
+                  isActive && styles.activeThreadItem,
+                  isActive && { backgroundColor: colors.card }
+                ]}
                 onPress={() => handleSelectThread(thread.id)}
                 onLongPress={() => handleOpenOptions(thread)}
                 delayLongPress={450}
@@ -117,8 +130,11 @@ export default function DrawerContent() {
                 <Text
                   style={[
                     styles.threadTitle,
+                    { color: colors.textMuted },
                     thread.is_pinned && styles.pinnedThreadTitle,
+                    thread.is_pinned && { color: colors.text },
                     isActive && styles.activeThreadTitle,
+                    isActive && { color: colors.text }
                   ]}
                   numberOfLines={1}
                 >
@@ -130,9 +146,14 @@ export default function DrawerContent() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <Pressable
-          style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed, { marginBottom: 8 }]}
+          style={({ pressed }) => [
+            styles.settingsButton, 
+            pressed && styles.settingsButtonPressed, 
+            pressed && { backgroundColor: colors.card },
+            { marginBottom: 8 }
+          ]}
           onPress={() => {
             router.navigate('/');
             if (typeof navigation.closeDrawer === 'function') {
@@ -140,13 +161,17 @@ export default function DrawerContent() {
             }
           }}
         >
-          <Text style={styles.settingsButtonText}>💬 Chat</Text>
+          <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>💬 Chat</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed]}
+          style={({ pressed }) => [
+            styles.settingsButton, 
+            pressed && styles.settingsButtonPressed,
+            pressed && { backgroundColor: colors.card }
+          ]}
           onPress={handleSettings}
         >
-          <Text style={styles.settingsButtonText}>⚙ Settings</Text>
+          <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>⚙ Settings</Text>
         </Pressable>
       </View>
 

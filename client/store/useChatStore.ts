@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useConfigStore } from './useConfigStore';
 
 export interface Message {
   id: string;
@@ -47,15 +48,32 @@ export const useChatStore = create<ChatState>()(
         messages: { ...state.messages, [id]: [] }
       })),
       selectThread: (id) => set({ activeThreadId: id }),
-      deleteThread: (id) => set((state) => {
-        const nextThreads = state.threads.filter((t) => t.id !== id);
-        const nextActive = state.activeThreadId === id
-          ? (nextThreads[0]?.id || null)
-          : state.activeThreadId;
-        const nextMessages = { ...state.messages };
-        delete nextMessages[id];
-        return { threads: nextThreads, activeThreadId: nextActive, messages: nextMessages };
-      }),
+      deleteThread: (id) => {
+        const config = useConfigStore.getState();
+        if (config.apiUrl && config.apiKey) {
+          let formattedUrl = config.apiUrl.trim();
+          if (!/^https?:\/\//i.test(formattedUrl)) {
+            formattedUrl = 'https://' + formattedUrl;
+          }
+          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          fetch(`${formattedUrl}/chat/threads/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${config.apiKey.trim()}`,
+            },
+          }).catch((err) => console.error('[deleteThread] Failed to delete on backend:', err));
+        }
+
+        set((state) => {
+          const nextThreads = state.threads.filter((t) => t.id !== id);
+          const nextActive = state.activeThreadId === id
+            ? (nextThreads[0]?.id || null)
+            : state.activeThreadId;
+          const nextMessages = { ...state.messages };
+          delete nextMessages[id];
+          return { threads: nextThreads, activeThreadId: nextActive, messages: nextMessages };
+        });
+      },
       addMessage: (threadId, message) => set((state) => {
         const current = state.messages[threadId] || [];
         const threadIndex = state.threads.findIndex(t => t.id === threadId);

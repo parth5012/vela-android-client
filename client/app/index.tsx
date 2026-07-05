@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore, Message } from '../store/useChatStore';
+import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
 import RichText from '../components/chat/RichText';
 import { streamAgentResponse } from '../utils/sse';
 
@@ -21,7 +22,10 @@ const generateId = (prefix: string) => {
 };
 
 export default function ChatScreen() {
-  const { apiUrl, apiKey } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor } = useConfigStore();
+  const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
+  const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
+  const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
   const {
     threads,
     activeThreadId,
@@ -49,17 +53,30 @@ export default function ChatScreen() {
     const isUser = item.role === 'user';
     return (
       <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
-        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-          <Text style={styles.senderLabel}>{isUser ? 'User' : 'Vela Agent'}</Text>
+        <View style={[
+          styles.bubble,
+          isUser ? styles.userBubble : styles.assistantBubble,
+          isUser 
+            ? { backgroundColor: colors.bubbleUser, borderColor: colors.bubbleUserBorder }
+            : { backgroundColor: accentHex + '0a', borderColor: accentHex + '26' }
+        ]}>
+          <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub }]}>
+            {isUser ? 'User' : 'Vela Agent'}
+          </Text>
           {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
-            <ActivityIndicator size="small" color="#818cf8" style={styles.loader} />
+            <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
           ) : (
-            <RichText content={item.content} />
+            <RichText 
+              content={item.content} 
+              theme={theme}
+              fontSize={fontSize}
+              accentColor={accentColor}
+            />
           )}
         </View>
       </View>
     );
-  }, [isStreaming, activeMessages]);
+  }, [isStreaming, activeMessages, colors, sizes, accentHex, theme, fontSize, accentColor]);
 
   const handleSend = async () => {
     if (!input.trim() || !activeThreadId || isStreaming) return;
@@ -125,15 +142,18 @@ export default function ChatScreen() {
 
   if (!activeThreadId || threads.length === 0) {
     return (
-      <View style={styles.welcomeContainer}>
+      <View style={[styles.welcomeContainer, { backgroundColor: colors.background }]}>
         <View style={styles.welcomeContent}>
-          <Text style={styles.welcomeLogo}>VELA</Text>
-          <Text style={styles.welcomeTitle}>Welcome to Vela</Text>
-          <Text style={styles.welcomeSubtitle}>
+          <Text style={[styles.welcomeLogo, { color: accentHex, fontSize: sizes.logo }]}>VELA</Text>
+          <Text style={[styles.welcomeTitle, { color: colors.text, fontSize: sizes.title }]}>Welcome to Vela</Text>
+          <Text style={[styles.welcomeSubtitle, { color: colors.textMuted, fontSize: sizes.text, lineHeight: sizes.text * 1.5 }]}>
             Your localized autonomous research agent node. Ready to analyze code, write equations, and execute pipelines.
           </Text>
-          <Pressable style={styles.welcomeButton} onPress={handleStartConversation}>
-            <Text style={styles.welcomeButtonText}>Start a Conversation</Text>
+          <Pressable 
+            style={[styles.welcomeButton, { backgroundColor: accentHex }]} 
+            onPress={handleStartConversation}
+          >
+            <Text style={[styles.welcomeButtonText, { fontSize: sizes.text }]}>Start a Conversation</Text>
           </Pressable>
         </View>
       </View>
@@ -144,7 +164,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <FlatList
         data={reversedMessages}
@@ -155,16 +175,18 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={[styles.emptyChat, { transform: [{ scaleY: -1 }] }]}>
-            <Text style={styles.emptyText}>Thread initialized. Say hello to get started.</Text>
+            <Text style={[styles.emptyText, { color: colors.textDark, fontSize: sizes.text }]}>
+              Thread initialized. Say hello to get started.
+            </Text>
           </View>
         }
       />
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
           placeholder="Ask a question or request a task..."
-          placeholderTextColor="#71717a"
+          placeholderTextColor={colors.textDark}
           value={input}
           onChangeText={setInput}
           multiline
@@ -173,13 +195,16 @@ export default function ChatScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.sendButton,
+            { backgroundColor: accentHex },
             (!input.trim() || isStreaming) && styles.sendButtonDisabled,
+            (!input.trim() || isStreaming) && { backgroundColor: colors.border },
             pressed && styles.sendButtonPressed,
+            pressed && { backgroundColor: accentHex + 'cc' },
           ]}
           onPress={handleSend}
           disabled={!input.trim() || isStreaming}
         >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Text style={[styles.sendButtonText, { fontSize: sizes.text }]}>Send</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>

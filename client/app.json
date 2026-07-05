@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "client",
+    "name": "Vela - Your Personal Assistant",
     "slug": "client",
     "scheme": "vela-client",
     "version": "1.0.0",
