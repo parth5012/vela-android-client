@@ -33,6 +33,8 @@ interface ChatState {
   setHistory: (threadId: string, history: Message[]) => void;
   setStreaming: (streaming: boolean) => void;
   clearStore: () => void;
+  branchThread: (parentThreadId: string, uptoMessageId: string, newThreadId: string, title: string) => Promise<void>;
+  truncateThreadHistory: (threadId: string, uptoMessageId: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -117,6 +119,92 @@ export const useChatStore = create<ChatState>()(
       })),
       setStreaming: (isStreaming) => set({ isStreaming }),
       clearStore: () => set({ threads: [], activeThreadId: null, messages: {}, isStreaming: false }),
+      branchThread: async (parentThreadId, uptoMessageId, newThreadId, title) => {
+        const config = useConfigStore.getState();
+        if (config.apiUrl && config.apiKey) {
+          let formattedUrl = config.apiUrl.trim();
+          if (!/^https?:\/\//i.test(formattedUrl)) {
+            formattedUrl = 'https://' + formattedUrl;
+          }
+          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          try {
+            await fetch(`${formattedUrl}/chat/threads/branch`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey.trim()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                parent_thread_id: parentThreadId,
+                new_thread_id: newThreadId,
+                upto_message_id: uptoMessageId,
+                title: title,
+              }),
+            });
+          } catch (err) {
+            console.error('[branchThread] Failed to branch on backend:', err);
+          }
+        }
+
+        set((state) => {
+          const parentMessages = state.messages[parentThreadId] || [];
+          const index = parentMessages.findIndex((m) => m.id === uptoMessageId);
+          const branchedMessages = index !== -1 ? parentMessages.slice(0, index + 1) : [...parentMessages];
+          
+          const newThread = {
+            id: newThreadId,
+            title,
+            updated_at: new Date().toISOString(),
+          };
+
+          return {
+            threads: [newThread, ...state.threads],
+            activeThreadId: newThreadId,
+            messages: {
+              ...state.messages,
+              [newThreadId]: branchedMessages,
+            },
+          };
+        });
+      },
+
+      truncateThreadHistory: async (threadId, uptoMessageId) => {
+        const config = useConfigStore.getState();
+        if (config.apiUrl && config.apiKey) {
+          let formattedUrl = config.apiUrl.trim();
+          if (!/^https?:\/\//i.test(formattedUrl)) {
+            formattedUrl = 'https://' + formattedUrl;
+          }
+          formattedUrl = formattedUrl.replace(/\/+$/, '');
+          try {
+            await fetch(`${formattedUrl}/chat/threads/${threadId}/truncate`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey.trim()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                upto_message_id: uptoMessageId,
+              }),
+            });
+          } catch (err) {
+            console.error('[truncateThreadHistory] Failed to truncate on backend:', err);
+          }
+        }
+
+        set((state) => {
+          const current = state.messages[threadId] || [];
+          const index = current.findIndex((m) => m.id === uptoMessageId);
+          const truncatedMessages = index !== -1 ? current.slice(0, index) : [...current];
+
+          return {
+            messages: {
+              ...state.messages,
+              [threadId]: truncatedMessages,
+            },
+          };
+        });
+      },
     }),
     {
       name: 'vela-chat-storage',
