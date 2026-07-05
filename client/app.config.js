@@ -1,6 +1,8 @@
-{
+const IS_PROD = process.env.APP_VARIANT === 'production';
+
+export default {
   "expo": {
-    "name": "Vela - Your Personal Assistant",
+    "name": IS_PROD ? "Vela - Your Personal Assistant" : "Vela (Dev)",
     "slug": "client",
     "scheme": "vela-client",
     "version": "1.0.0",
@@ -9,7 +11,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.parth5012.client",
+      "bundleIdentifier": IS_PROD ? "com.parth5012.client" : "com.parth5012.client.dev",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -22,7 +24,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.parth5012.client",
+      "package": IS_PROD ? "com.parth5012.client" : "com.parth5012.client.dev",
       "softwareKeyboardLayoutMode": "adjustResize"
     },
     "web": {
@@ -39,4 +41,4 @@
       }
     }
   }
-}
+};
