@@ -36,6 +36,10 @@ export default function ChatScreen() {
 
   const [input, setInput] = useState('');
 
+  React.useEffect(() => {
+    setStreaming(false);
+  }, []);
+
   const activeMessages = activeThreadId ? messages[activeThreadId] || [] : [];
   const reversedMessages = useMemo(() => {
     return [...activeMessages].reverse();

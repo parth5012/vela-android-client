@@ -103,6 +103,11 @@ export const useChatStore = create<ChatState>()(
     {
       name: 'vela-chat-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        threads: state.threads,
+        activeThreadId: state.activeThreadId,
+        messages: state.messages,
+      }),
     }
   )
 );
