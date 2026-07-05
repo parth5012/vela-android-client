@@ -4,96 +4,6 @@
   "graph": {},
   "nodes": [
     {
-      "label": "RichText.test.tsx",
-      "file_type": "code",
-      "source_file": "__tests__/RichText.test.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_richtext_test",
-      "community": 4,
-      "norm_label": "richtext.test.tsx"
-    },
-    {
-      "label": "latexExtractor.test.ts",
-      "file_type": "code",
-      "source_file": "__tests__/latexExtractor.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_latexextractor_test",
-      "community": 4,
-      "norm_label": "latexextractor.test.ts"
-    },
-    {
-      "label": "setup.test.tsx",
-      "file_type": "code",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_setup_test",
-      "community": 0,
-      "norm_label": "setup.test.tsx"
-    },
-    {
-      "label": "mockReplace",
-      "file_type": "code",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "tests_setup_test_mockreplace",
-      "community": 0,
-      "norm_label": "mockreplace"
-    },
-    {
-      "label": "sse.test.ts",
-      "file_type": "code",
-      "source_file": "__tests__/sse.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_sse_test",
-      "community": 6,
-      "norm_label": "sse.test.ts"
-    },
-    {
-      "label": "getReader()",
-      "file_type": "code",
-      "source_file": "__tests__/sse.test.ts",
-      "source_location": "L21",
-      "_origin": "ast",
-      "id": "tests_sse_test_getreader",
-      "community": 6,
-      "norm_label": "getreader()"
-    },
-    {
-      "label": "useChatStore.test.ts",
-      "file_type": "code",
-      "source_file": "__tests__/useChatStore.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_usechatstore_test",
-      "community": 6,
-      "norm_label": "usechatstore.test.ts"
-    },
-    {
-      "label": "useConfigStore.test.ts",
-      "file_type": "code",
-      "source_file": "__tests__/useConfigStore.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_useconfigstore_test",
-      "community": 0,
-      "norm_label": "useconfigstore.test.ts"
-    },
-    {
-      "label": "mockSecureStore",
-      "file_type": "code",
-      "source_file": "__tests__/useConfigStore.test.ts",
-      "source_location": "L5",
-      "_origin": "ast",
-      "id": "tests_useconfigstore_test_mocksecurestore",
-      "community": 0,
-      "norm_label": "mocksecurestore"
-    },
-    {
       "label": "abc.js",
       "file_type": "code",
       "source_file": "abc.js",
@@ -210,7 +120,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "app_expo_ios",
-      "community": 2,
+      "community": 7,
       "norm_label": "ios"
     },
     {
@@ -220,7 +130,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "app_ios_supportstablet",
-      "community": 2,
+      "community": 7,
       "norm_label": "supportstablet"
     },
     {
@@ -230,7 +140,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "app_ios_bundleidentifier",
-      "community": 2,
+      "community": 7,
       "norm_label": "bundleidentifier"
     },
     {
@@ -240,7 +150,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "app_ios_infoplist",
-      "community": 2,
+      "community": 7,
       "norm_label": "infoplist"
     },
     {
@@ -250,7 +160,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "app_infoplist_itsappusesnonexemptencryption",
-      "community": 2,
+      "community": 7,
       "norm_label": "itsappusesnonexemptencryption"
     },
     {
@@ -440,7 +350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_index",
-      "community": 6,
+      "community": 0,
       "norm_label": "index.tsx"
     },
     {
@@ -450,7 +360,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "app_index_generateid",
-      "community": 6,
+      "community": 0,
       "norm_label": "generateid()"
     },
     {
@@ -460,7 +370,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "app_index_chatscreen",
-      "community": 6,
+      "community": 0,
       "norm_label": "chatscreen()"
     },
     {
@@ -470,7 +380,7 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "app_index_styles",
-      "community": 6,
+      "community": 0,
       "norm_label": "styles"
     },
     {
@@ -480,7 +390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_settings",
-      "community": 6,
+      "community": 0,
       "norm_label": "settings.tsx"
     },
     {
@@ -490,7 +400,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "app_settings_settingsscreen",
-      "community": 6,
+      "community": 0,
       "norm_label": "settingsscreen()"
     },
     {
@@ -500,7 +410,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "app_settings_styles",
-      "community": 6,
+      "community": 0,
       "norm_label": "styles"
     },
     {
@@ -920,7 +830,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "package_devdependencies",
-      "community": 3,
+      "community": 6,
       "norm_label": "devdependencies"
     },
     {
@@ -930,7 +840,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "package_devdependencies_react_native_jest_preset",
-      "community": 3,
+      "community": 6,
       "norm_label": "@react-native/jest-preset"
     },
     {
@@ -940,7 +850,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "package_devdependencies_types_jest",
-      "community": 3,
+      "community": 6,
       "norm_label": "@types/jest"
     },
     {
@@ -950,7 +860,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "package_devdependencies_types_react",
-      "community": 3,
+      "community": 6,
       "norm_label": "@types/react"
     },
     {
@@ -960,7 +870,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "package_devdependencies_jest",
-      "community": 3,
+      "community": 6,
       "norm_label": "jest"
     },
     {
@@ -970,7 +880,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "package_devdependencies_jest_expo",
-      "community": 3,
+      "community": 6,
       "norm_label": "jest-expo"
     },
     {
@@ -980,7 +890,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "package_devdependencies_react_test_renderer",
-      "community": 3,
+      "community": 6,
       "norm_label": "react-test-renderer"
     },
     {
@@ -990,7 +900,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "package_devdependencies_typescript",
-      "community": 3,
+      "community": 6,
       "norm_label": "typescript"
     },
     {
@@ -1000,7 +910,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "package_scripts",
-      "community": 7,
+      "community": 3,
       "norm_label": "scripts"
     },
     {
@@ -1010,7 +920,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "package_scripts_start",
-      "community": 7,
+      "community": 3,
       "norm_label": "start"
     },
     {
@@ -1020,7 +930,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "package_scripts_android",
-      "community": 7,
+      "community": 3,
       "norm_label": "android"
     },
     {
@@ -1030,7 +940,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "package_scripts_ios",
-      "community": 7,
+      "community": 3,
       "norm_label": "ios"
     },
     {
@@ -1040,7 +950,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "package_scripts_web",
-      "community": 7,
+      "community": 3,
       "norm_label": "web"
     },
     {
@@ -1050,7 +960,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "package_scripts_test",
-      "community": 7,
+      "community": 3,
       "norm_label": "test"
     },
     {
@@ -1100,7 +1010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "store_usechatstore",
-      "community": 6,
+      "community": 0,
       "norm_label": "usechatstore.ts"
     },
     {
@@ -1110,7 +1020,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "store_usechatstore_message",
-      "community": 6,
+      "community": 0,
       "norm_label": "message"
     },
     {
@@ -1120,7 +1030,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "store_usechatstore_thread",
-      "community": 6,
+      "community": 0,
       "norm_label": "thread"
     },
     {
@@ -1130,7 +1040,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "store_usechatstore_chatstate",
-      "community": 6,
+      "community": 0,
       "norm_label": "chatstate"
     },
     {
@@ -1140,7 +1050,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "store_usechatstore_usechatstore",
-      "community": 6,
+      "community": 0,
       "norm_label": "usechatstore"
     },
     {
@@ -1270,7 +1180,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_sse",
-      "community": 6,
+      "community": 0,
       "norm_label": "sse.ts"
     },
     {
@@ -1280,173 +1190,11 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_sse_streamagentresponse",
-      "community": 6,
+      "community": 0,
       "norm_label": "streamagentresponse()"
     }
   ],
   "links": [
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/RichText.test.tsx",
-      "source_location": "L24",
-      "weight": 1.0,
-      "source": "tests_richtext_test",
-      "target": "components_chat_richtext",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/latexExtractor.test.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "tests_latexextractor_test",
-      "target": "utils_latexextractor",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/latexExtractor.test.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "tests_latexextractor_test",
-      "target": "utils_latexextractor_parsecontent",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L3",
-      "weight": 1.0,
-      "source": "tests_setup_test",
-      "target": "app_setup",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L4",
-      "weight": 1.0,
-      "source": "tests_setup_test",
-      "target": "store_useconfigstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L4",
-      "weight": 1.0,
-      "source": "tests_setup_test",
-      "target": "store_useconfigstore_useconfigstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/setup.test.tsx",
-      "source_location": "L7",
-      "weight": 1.0,
-      "source": "tests_setup_test",
-      "target": "tests_setup_test_mockreplace",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/sse.test.ts",
-      "source_location": "L150",
-      "weight": 1.0,
-      "source": "tests_sse_test",
-      "target": "tests_sse_test_getreader",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/sse.test.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "tests_sse_test",
-      "target": "utils_sse",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/sse.test.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "tests_sse_test",
-      "target": "utils_sse_streamagentresponse",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/useChatStore.test.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "tests_usechatstore_test",
-      "target": "store_usechatstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/useChatStore.test.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "tests_usechatstore_test",
-      "target": "store_usechatstore_usechatstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/useConfigStore.test.ts",
-      "source_location": "L17",
-      "weight": 1.0,
-      "source": "tests_useconfigstore_test",
-      "target": "store_useconfigstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/useConfigStore.test.ts",
-      "source_location": "L17",
-      "weight": 1.0,
-      "source": "tests_useconfigstore_test",
-      "target": "store_useconfigstore_useconfigstore",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "__tests__/useConfigStore.test.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "tests_useconfigstore_test",
-      "target": "tests_useconfigstore_test_mocksecurestore",
-      "confidence_score": 1.0
-    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",

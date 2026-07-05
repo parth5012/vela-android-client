@@ -24,7 +24,10 @@ export async function streamAgentResponse(
       },
       body: JSON.stringify({ thread_id: threadId, message }),
       signal,
-    });
+      ...((Platform.OS !== 'web' && process.env.NODE_ENV !== 'test') ? {
+        reactNative: { textStreaming: true }
+      } : {})
+    } as any);
 
     if (!response.ok) {
       throw new Error(`Server returned HTTP ${response.status}`);

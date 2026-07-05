@@ -41,6 +41,22 @@ export default function ChatScreen() {
     return [...activeMessages].reverse();
   }, [activeMessages]);
 
+  const renderItem = useCallback(({ item }: { item: Message }) => {
+    const isUser = item.role === 'user';
+    return (
+      <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+          <Text style={styles.senderLabel}>{isUser ? 'User' : 'Vela Agent'}</Text>
+          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
+            <ActivityIndicator size="small" color="#818cf8" style={styles.loader} />
+          ) : (
+            <RichText content={item.content} />
+          )}
+        </View>
+      </View>
+    );
+  }, [isStreaming, activeMessages]);
+
   const handleSend = async () => {
     if (!input.trim() || !activeThreadId || isStreaming) return;
     Keyboard.dismiss();
@@ -119,22 +135,6 @@ export default function ChatScreen() {
       </View>
     );
   }
-
-  const renderItem = useCallback(({ item }: { item: Message }) => {
-    const isUser = item.role === 'user';
-    return (
-      <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
-        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-          <Text style={styles.senderLabel}>{isUser ? 'User' : 'Vela Agent'}</Text>
-          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
-            <ActivityIndicator size="small" color="#818cf8" style={styles.loader} />
-          ) : (
-            <RichText content={item.content} />
-          )}
-        </View>
-      </View>
-    );
-  }, [isStreaming, activeMessages]);
 
   return (
     <KeyboardAvoidingView

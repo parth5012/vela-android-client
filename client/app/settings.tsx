@@ -153,6 +153,14 @@ export default function SettingsScreen() {
       style={styles.container}
       contentContainerStyle={styles.scrollContainer}
     >
+      {/* Back Button */}
+      <Pressable
+        style={styles.backButton}
+        onPress={() => router.navigate('/')}
+      >
+        <Text style={styles.backButtonText}>← Back to Chat</Text>
+      </Pressable>
+
       {/* Node Configuration Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Node Configuration</Text>
@@ -434,6 +442,17 @@ const styles = StyleSheet.create({
   scrollContainer: {
     padding: 24,
     paddingBottom: 40,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    color: '#818cf8',
+    fontSize: 15,
+    fontWeight: '600',
   },
   section: {
     marginBottom: 32,

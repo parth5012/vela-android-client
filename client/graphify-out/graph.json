@@ -4,26 +4,6 @@
   "graph": {},
   "nodes": [
     {
-      "label": "abc.js",
-      "file_type": "code",
-      "source_file": "abc.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "abc",
-      "community": 9,
-      "norm_label": "abc.js"
-    },
-    {
-      "label": "formattedUrl",
-      "file_type": "code",
-      "source_file": "abc.js",
-      "source_location": "L4",
-      "_origin": "ast",
-      "id": "abc_formattedurl",
-      "community": 9,
-      "norm_label": "formattedurl"
-    },
-    {
       "label": "app.json",
       "file_type": "code",
       "source_file": "app.json",
@@ -120,7 +100,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "app_expo_ios",
-      "community": 7,
+      "community": 2,
       "norm_label": "ios"
     },
     {
@@ -130,7 +110,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "app_ios_supportstablet",
-      "community": 7,
+      "community": 2,
       "norm_label": "supportstablet"
     },
     {
@@ -140,7 +120,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "app_ios_bundleidentifier",
-      "community": 7,
+      "community": 2,
       "norm_label": "bundleidentifier"
     },
     {
@@ -150,7 +130,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "app_ios_infoplist",
-      "community": 7,
+      "community": 2,
       "norm_label": "infoplist"
     },
     {
@@ -160,7 +140,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "app_infoplist_itsappusesnonexemptencryption",
-      "community": 7,
+      "community": 2,
       "norm_label": "itsappusesnonexemptencryption"
     },
     {
@@ -830,7 +810,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "package_devdependencies",
-      "community": 6,
+      "community": 3,
       "norm_label": "devdependencies"
     },
     {
@@ -840,7 +820,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "package_devdependencies_react_native_jest_preset",
-      "community": 6,
+      "community": 3,
       "norm_label": "@react-native/jest-preset"
     },
     {
@@ -850,7 +830,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "package_devdependencies_types_jest",
-      "community": 6,
+      "community": 3,
       "norm_label": "@types/jest"
     },
     {
@@ -860,7 +840,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "package_devdependencies_types_react",
-      "community": 6,
+      "community": 3,
       "norm_label": "@types/react"
     },
     {
@@ -870,7 +850,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "package_devdependencies_jest",
-      "community": 6,
+      "community": 3,
       "norm_label": "jest"
     },
     {
@@ -880,7 +860,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "package_devdependencies_jest_expo",
-      "community": 6,
+      "community": 3,
       "norm_label": "jest-expo"
     },
     {
@@ -890,7 +870,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "package_devdependencies_react_test_renderer",
-      "community": 6,
+      "community": 3,
       "norm_label": "react-test-renderer"
     },
     {
@@ -900,7 +880,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "package_devdependencies_typescript",
-      "community": 6,
+      "community": 3,
       "norm_label": "typescript"
     },
     {
@@ -910,7 +890,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "package_scripts",
-      "community": 3,
+      "community": 6,
       "norm_label": "scripts"
     },
     {
@@ -920,7 +900,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "package_scripts_start",
-      "community": 3,
+      "community": 6,
       "norm_label": "start"
     },
     {
@@ -930,7 +910,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "package_scripts_android",
-      "community": 3,
+      "community": 6,
       "norm_label": "android"
     },
     {
@@ -940,7 +920,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "package_scripts_ios",
-      "community": 3,
+      "community": 6,
       "norm_label": "ios"
     },
     {
@@ -950,7 +930,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "package_scripts_web",
-      "community": 3,
+      "community": 6,
       "norm_label": "web"
     },
     {
@@ -960,7 +940,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "package_scripts_test",
-      "community": 3,
+      "community": 6,
       "norm_label": "test"
     },
     {
@@ -1195,16 +1175,6 @@
     }
   ],
   "links": [
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "abc.js",
-      "source_location": "L4",
-      "weight": 1.0,
-      "source": "abc",
-      "target": "abc_formattedurl",
-      "confidence_score": 1.0
-    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -2600,5 +2570,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "03044d679f7c2ae540542c5a2c5f08b7bc97ed09"
+  "built_at_commit": "e63c5dfabde0b4a3dbd97585bd2afd3949a89e42"
 }

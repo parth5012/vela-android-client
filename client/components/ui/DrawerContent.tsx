@@ -41,6 +41,7 @@ export default function DrawerContent() {
   const handleNewChat = () => {
     const newId = generateId();
     createThread('New Conversation', newId);
+    router.navigate('/');
     if (typeof navigation.closeDrawer === 'function') {
       navigation.closeDrawer();
     }
@@ -48,6 +49,7 @@ export default function DrawerContent() {
 
   const handleSelectThread = (id: string) => {
     selectThread(id);
+    router.navigate('/');
     if (typeof navigation.closeDrawer === 'function') {
       navigation.closeDrawer();
     }
@@ -75,12 +77,20 @@ export default function DrawerContent() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <Pressable
+        style={styles.header}
+        onPress={() => {
+          router.navigate('/');
+          if (typeof navigation.closeDrawer === 'function') {
+            navigation.closeDrawer();
+          }
+        }}
+      >
         <Text style={styles.logo}>VELA</Text>
         <Text style={styles.nodeStatus} numberOfLines={1}>
           Node: {apiUrl.replace(/^https?:\/\//, '')}
         </Text>
-      </View>
+      </Pressable>
 
       <Pressable
         style={({ pressed }) => [styles.newChatButton, pressed && styles.newChatButtonPressed]}
@@ -121,6 +131,17 @@ export default function DrawerContent() {
       </ScrollView>
 
       <View style={styles.footer}>
+        <Pressable
+          style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed, { marginBottom: 8 }]}
+          onPress={() => {
+            router.navigate('/');
+            if (typeof navigation.closeDrawer === 'function') {
+              navigation.closeDrawer();
+            }
+          }}
+        >
+          <Text style={styles.settingsButtonText}>💬 Chat</Text>
+        </Pressable>
         <Pressable
           style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed]}
           onPress={handleSettings}

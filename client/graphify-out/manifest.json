@@ -4,11 +4,6 @@
     "ast_hash": "dc580fca35a0e98ed20777ede5e545a1",
     "semantic_hash": "dc580fca35a0e98ed20777ede5e545a1"
   },
-  "abc.js": {
-    "mtime": 1783187106.3664515,
-    "ast_hash": "d72b6c364175238b9b88f00e6a335963",
-    "semantic_hash": "d72b6c364175238b9b88f00e6a335963"
-  },
   "app.json": {
     "mtime": 1783173005.043097,
     "ast_hash": "4edd2979899b9787cdec14cf88c8182b",

@@ -4,6 +4,7 @@ import { Drawer } from 'expo-router/drawer';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
 import DrawerContent from '../components/ui/DrawerContent';
+import HealthIndicator from '../components/ui/HealthIndicator';
 import { Platform } from 'react-native';
 
 
@@ -61,6 +62,7 @@ export default function RootLayout() {
           fontSize: 16,
         },
         headerTintColor: '#e4e4e7',
+        headerRight: () => <HealthIndicator />,
         drawerStyle: {
           backgroundColor: '#09090b',
           width: 280,
