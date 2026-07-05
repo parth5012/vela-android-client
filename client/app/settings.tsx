@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore } from '../store/useChatStore';
+import { syncHistoryWithBackend } from '../utils/history';
 
 export default function SettingsScreen() {
   const { apiUrl: storedUrl, apiKey: storedKey, setConfig, clearConfig } = useConfigStore();
@@ -25,16 +26,23 @@ export default function SettingsScreen() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const isMounted = React.useRef(true);
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const handleSave = async () => {
     Keyboard.dismiss();
-    setSuccess(false);
+    if (isMounted.current) setSuccess(false);
 
     if (!apiUrl.trim()) {
-      setError('API URL is required');
+      if (isMounted.current) setError('API URL is required');
       return;
     }
     if (!apiKey.trim()) {
-      setError('API Key is required');
+      if (isMounted.current) setError('API Key is required');
       return;
     }
 
@@ -45,8 +53,10 @@ export default function SettingsScreen() {
     formattedUrl = formattedUrl.replace(/\/+$/, '');
 
     try {
-      setIsTesting(true);
-      setError('');
+      if (isMounted.current) {
+        setIsTesting(true);
+        setError('');
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -64,18 +74,30 @@ export default function SettingsScreen() {
 
       if (response.ok) {
         setConfig(formattedUrl, apiKey.trim());
-        setSuccess(true);
+        if (isMounted.current) {
+          setSuccess(true);
+          setIsTesting(false); // Stop loading immediately
+        }
+        syncHistoryWithBackend(formattedUrl, apiKey.trim());
+        return;
       } else {
-        setError(`Connection failed. Server returned status: ${response.status}`);
+        if (isMounted.current) {
+          setError(`Connection failed. Server returned status: ${response.status}`);
+        }
       }
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setError('Connection timed out. Please verify your URL and network.');
-      } else {
-        setError(err.message || 'Failed to connect. Please check URL and credentials.');
+      if (isMounted.current) {
+        setSuccess(false);
+        if (err.name === 'AbortError') {
+          setError('Connection timed out. Please verify your URL and network.');
+        } else {
+          setError(err.message || 'Failed to connect. Please check URL and credentials.');
+        }
       }
     } finally {
-      setIsTesting(false);
+      if (isMounted.current) {
+        setIsTesting(false);
+      }
     }
   };
 

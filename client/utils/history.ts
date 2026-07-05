@@ -13,19 +13,22 @@ import { useConfigStore } from '../store/useConfigStore';
  * 
  * Make sure the file compiles and handles errors gracefully without throwing.
  */
-export async function syncHistoryWithBackend(): Promise<boolean> {
+export async function syncHistoryWithBackend(apiUrl?: string, apiKey?: string): Promise<boolean> {
   try {
-    const { apiUrl, apiKey } = useConfigStore.getState();
-    if (!apiUrl || !apiKey) {
+    const config = useConfigStore.getState();
+    const effectiveApiUrl = apiUrl || config.apiUrl;
+    const effectiveApiKey = apiKey || config.apiKey;
+
+    if (!effectiveApiUrl || !effectiveApiKey) {
       console.warn('[syncHistoryWithBackend] API URL or API Key is not configured.');
       return false;
     }
 
     // 1. Performs a GET request to `${apiUrl}/chat/threads` with authorization header
-    const response = await fetch(`${apiUrl}/chat/threads`, {
+    const response = await fetch(`${effectiveApiUrl}/chat/threads`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${effectiveApiKey}`,
         'Accept': 'application/json',
       },
     });
@@ -45,10 +48,10 @@ export async function syncHistoryWithBackend(): Promise<boolean> {
       Promise.all(
         threads.map(async (thread) => {
           try {
-            const res = await fetch(`${apiUrl}/chat/threads/${thread.id}`, {
+            const res = await fetch(`${effectiveApiUrl}/chat/threads/${thread.id}`, {
               method: 'GET',
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'Authorization': `Bearer ${effectiveApiKey}`,
                 'Accept': 'application/json',
               },
             });
