@@ -10,7 +10,14 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
+  Share,
+  Alert,
+  ScrollView,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import MessageOptionsModal from '../components/ui/MessageOptionsModal';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore, Message } from '../store/useChatStore';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
@@ -22,7 +29,7 @@ const generateId = (prefix: string) => {
 };
 
 export default function ChatScreen() {
-  const { apiUrl, apiKey, theme, fontSize, accentColor } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName } = useConfigStore();
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
@@ -36,9 +43,13 @@ export default function ChatScreen() {
     appendToken,
     setThreads,
     setStreaming,
+    truncateThreadHistory,
+    branchThread,
   } = useChatStore();
 
   const [input, setInput] = useState('');
+  const [activeMenuMessage, setActiveMenuMessage] = useState<Message | null>(null);
+  const [showRawMap, setShowRawMap] = useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
     setStreaming(false);
@@ -49,8 +60,150 @@ export default function ChatScreen() {
     return [...activeMessages].reverse();
   }, [activeMessages]);
 
+  const handleCopyText = useCallback(async (text: string) => {
+    await Clipboard.setStringAsync(text);
+    Alert.alert('Success', 'Copied to clipboard');
+  }, []);
+
+  const handleShareText = useCallback(async (text: string) => {
+    try {
+      await Share.share({ message: text });
+    } catch (err: any) {
+      console.error(err);
+    }
+  }, []);
+
+  const handleDownloadMd = useCallback(async (message: Message) => {
+    try {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `vela-response-${message.id}-${dateStr}.md`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      const mdContent = `# Vela Agent Response\n*Date: ${new Date().toLocaleString()}*\n\n${message.content}`;
+
+      await FileSystem.writeAsStringAsync(fileUri, mdContent, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: 'text/markdown', dialogTitle: 'Download Response' });
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to save markdown file.');
+    }
+  }, []);
+
+  const handleRegenerate = useCallback(async (message: Message) => {
+    if (isStreaming || !activeThreadId) return;
+
+    const threadMsgs = messages[activeThreadId] || [];
+    const index = threadMsgs.findIndex((m) => m.id === message.id);
+    if (index === -1) return;
+
+    // Find preceding user query
+    let userPrompt = '';
+    for (let i = index - 1; i >= 0; i--) {
+      if (threadMsgs[i].role === 'user') {
+        userPrompt = threadMsgs[i].content;
+        break;
+      }
+    }
+
+    if (!userPrompt) {
+      Alert.alert('Error', 'No preceding query found to regenerate.');
+      return;
+    }
+
+    // Truncate thread history up to the assistant message
+    await truncateThreadHistory(activeThreadId, message.id);
+
+    // Add empty message for streaming
+    const assistantMsgId = generateId('msg_assistant');
+    addMessage(activeThreadId, {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+    });
+
+    setStreaming(true);
+
+    // Call SSE API again
+    await streamAgentResponse(
+      apiUrl,
+      apiKey,
+      activeThreadId,
+      userPrompt,
+      (chunk) => {
+        appendToken(activeThreadId, chunk);
+      },
+      (newTitle) => {
+        setStreaming(false);
+        if (newTitle) {
+          const updatedThreads = threads.map((t) =>
+            t.id === activeThreadId ? { ...t, title: newTitle } : t
+          );
+          setThreads(updatedThreads);
+        }
+      },
+      (error) => {
+        setStreaming(false);
+        const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
+        appendToken(activeThreadId, `\n\n⚠️ **Error:** ${errMsg}`);
+      }
+    );
+  }, [
+    isStreaming,
+    activeThreadId,
+    messages,
+    apiUrl,
+    apiKey,
+    threads,
+    truncateThreadHistory,
+    addMessage,
+    setStreaming,
+    appendToken,
+    setThreads,
+  ]);
+
+  const handleBranch = useCallback(async (message: Message) => {
+    if (!activeThreadId) return;
+    const newThreadId = 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+    await branchThread(activeThreadId, message.id, newThreadId, 'Branched Conversation');
+    Alert.alert('Success', 'Branched to a new conversation.');
+  }, [activeThreadId, branchThread]);
+
+  const handleCopyCodeBlocks = useCallback(async (text: string) => {
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const matches = text.match(codeBlockRegex);
+    if (!matches || matches.length === 0) {
+      Alert.alert('Info', 'No code blocks found in this message.');
+      return;
+    }
+
+    const cleanedCodes = matches.map((m) => {
+      return m.replace(/^```[a-zA-Z0-9+#-]*\n/, '').replace(/```$/, '');
+    }).join('\n\n---\n\n');
+
+    await Clipboard.setStringAsync(cleanedCodes);
+    Alert.alert('Success', 'Copied code blocks to clipboard.');
+  }, []);
+
+  const handleShowInfo = useCallback((message: Message) => {
+    const wordCount = message.content.trim().split(/\s+/).filter(Boolean).length;
+    const charCount = message.content.length;
+    Alert.alert(
+      'Response Metadata',
+      `Model: ${modelName || 'gemini-1.5-flash'}\nWords: ${wordCount}\nCharacters: ${charCount}`
+    );
+  }, [modelName]);
+
+  const toggleRaw = useCallback((msgId: string) => {
+    setShowRawMap(prev => ({
+      ...prev,
+      [msgId]: !prev[msgId]
+    }));
+  }, []);
+
   const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
+    const isLastAssistantMessage = item.role === 'assistant' && activeMessages.filter(m => m.role === 'assistant').pop()?.id === item.id;
+    const isCompleted = item.content !== '' && (!isStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
+    const showActionBar = isLastAssistantMessage && isCompleted;
+
     return (
       <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
         <View style={[
@@ -63,7 +216,13 @@ export default function ChatScreen() {
           <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub }]}>
             {isUser ? 'User' : 'Vela Agent'}
           </Text>
-          {item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
+          {showRawMap[item.id] ? (
+            <ScrollView style={styles.rawScroll} nestedScrollEnabled={true}>
+              <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.text }]}>
+                {item.content}
+              </Text>
+            </ScrollView>
+          ) : item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
             <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
           ) : (
             <RichText 
@@ -73,10 +232,47 @@ export default function ChatScreen() {
               accentColor={accentColor}
             />
           )}
+
+          {showActionBar && (
+            <View style={styles.actionBar}>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                onPress={() => handleCopyText(item.content)}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Copy</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                onPress={() => handleShareText(item.content)}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Share</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                onPress={() => setActiveMenuMessage(item)}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>︙</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </View>
     );
-  }, [isStreaming, activeMessages, colors, sizes, accentHex, theme, fontSize, accentColor]);
+  }, [
+    isStreaming,
+    activeMessages,
+    colors,
+    sizes,
+    accentHex,
+    theme,
+    fontSize,
+    accentColor,
+    showRawMap,
+    handleCopyText,
+    handleShareText,
+    setActiveMenuMessage,
+  ]);
+
 
   const handleSend = async () => {
     if (!input.trim() || !activeThreadId || isStreaming) return;
@@ -207,6 +403,18 @@ export default function ChatScreen() {
           <Text style={[styles.sendButtonText, { fontSize: sizes.text }]}>Send</Text>
         </Pressable>
       </View>
+
+      <MessageOptionsModal
+        visible={activeMenuMessage !== null}
+        onClose={() => setActiveMenuMessage(null)}
+        onDownloadMd={() => activeMenuMessage && handleDownloadMd(activeMenuMessage)}
+        onRegenerate={() => activeMenuMessage && handleRegenerate(activeMenuMessage)}
+        onToggleRaw={() => activeMenuMessage && toggleRaw(activeMenuMessage.id)}
+        onBranch={() => activeMenuMessage && handleBranch(activeMenuMessage)}
+        onCopyCodeBlocks={() => activeMenuMessage && handleCopyCodeBlocks(activeMenuMessage.content)}
+        onShowInfo={() => activeMenuMessage && handleShowInfo(activeMenuMessage)}
+        isRaw={activeMenuMessage ? !!showRawMap[activeMenuMessage.id] : false}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -352,4 +560,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 12,
+  },
+  actionBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  actionBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#a1a1aa',
+  },
+  rawScroll: {
+    maxHeight: 200,
+  },
+  rawText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
 });
+
