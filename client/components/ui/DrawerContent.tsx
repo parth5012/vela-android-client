@@ -9,17 +9,34 @@ import {
 } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { useConfigStore } from '../../store/useConfigStore';
-import { useChatStore } from '../../store/useChatStore';
+import { useChatStore, Thread } from '../../store/useChatStore';
+import ThreadOptionsModal from './ThreadOptionsModal';
 
 const generateId = () => {
   return 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 };
 
 export default function DrawerContent() {
-  const { threads, activeThreadId, createThread, deleteThread, selectThread } = useChatStore();
+  const threads = useChatStore((state) => state.threads);
+  const activeThreadId = useChatStore((state) => state.activeThreadId);
+  const createThread = useChatStore((state) => state.createThread);
+  const selectThread = useChatStore((state) => state.selectThread);
   const { apiUrl } = useConfigStore();
   const router = useRouter();
   const navigation = useNavigation<any>();
+
+  const [optionsVisible, setOptionsVisible] = React.useState(false);
+  const [selectedThread, setSelectedThread] = React.useState<Thread | null>(null);
+
+  const handleOpenOptions = (thread: Thread) => {
+    setSelectedThread(thread);
+    setOptionsVisible(true);
+  };
+
+  const handleCloseOptions = () => {
+    setOptionsVisible(false);
+    setSelectedThread(null);
+  };
 
   const handleNewChat = () => {
     const newId = generateId();
@@ -36,17 +53,25 @@ export default function DrawerContent() {
     }
   };
 
-  const handleDeleteThread = (e: any, id: string) => {
-    e.stopPropagation();
-    deleteThread(id);
-  };
-
   const handleSettings = () => {
     router.navigate('/settings');
     if (typeof navigation.closeDrawer === 'function') {
       navigation.closeDrawer();
     }
   };
+
+  const sortedThreads = React.useMemo(() => {
+    return [...threads].sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      // Fallback to 0 if date is invalid (isNaN)
+      const valA = isNaN(timeA) ? 0 : timeA;
+      const valB = isNaN(timeB) ? 0 : timeB;
+      return valB - valA;
+    });
+  }, [threads]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -66,29 +91,29 @@ export default function DrawerContent() {
 
       <ScrollView style={styles.threadsContainer} contentContainerStyle={styles.threadsContent}>
         <Text style={styles.sectionTitle}>Recent Chats</Text>
-        {threads.length === 0 ? (
+        {sortedThreads.length === 0 ? (
           <Text style={styles.emptyText}>No chats yet</Text>
         ) : (
-          threads.map((thread) => {
+          sortedThreads.map((thread) => {
             const isActive = thread.id === activeThreadId;
             return (
               <Pressable
                 key={thread.id}
                 style={[styles.threadItem, isActive && styles.activeThreadItem]}
                 onPress={() => handleSelectThread(thread.id)}
+                onLongPress={() => handleOpenOptions(thread)}
+                delayLongPress={450}
               >
                 <Text
-                  style={[styles.threadTitle, isActive && styles.activeThreadTitle]}
+                  style={[
+                    styles.threadTitle,
+                    thread.is_pinned && styles.pinnedThreadTitle,
+                    isActive && styles.activeThreadTitle,
+                  ]}
                   numberOfLines={1}
                 >
-                  {thread.title}
+                  {thread.is_pinned ? '📌 ' : ''}{thread.title}
                 </Text>
-                <Pressable
-                  style={styles.deleteButton}
-                  onPress={(e) => handleDeleteThread(e, thread.id)}
-                >
-                  <Text style={styles.deleteButtonText}>✕</Text>
-                </Pressable>
               </Pressable>
             );
           })
@@ -103,6 +128,12 @@ export default function DrawerContent() {
           <Text style={styles.settingsButtonText}>⚙ Settings</Text>
         </Pressable>
       </View>
+
+      <ThreadOptionsModal
+        visible={optionsVisible}
+        thread={selectedThread}
+        onClose={handleCloseOptions}
+      />
     </SafeAreaView>
   );
 }
@@ -186,6 +217,10 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     flex: 1,
     marginRight: 8,
+  },
+  pinnedThreadTitle: {
+    color: '#e4e4e7',
+    fontWeight: '600',
   },
   activeThreadTitle: {
     color: '#f4f4f5',
