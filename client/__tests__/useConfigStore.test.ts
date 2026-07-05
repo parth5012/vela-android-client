@@ -43,6 +43,35 @@ describe('useConfigStore', () => {
     expect(clearedState.isConfigured).toBe(false);
   });
 
+  it('should initialize with default values for UI customizations and agent parameters', () => {
+    const state = useConfigStore.getState();
+    expect(state.theme).toBe('deep');
+    expect(state.fontSize).toBe('medium');
+    expect(state.accentColor).toBe('indigo');
+    expect(state.systemPrompt).toBe('You are an autonomous research agent.');
+    expect(state.temperature).toBe(0.7);
+    expect(state.modelName).toBe('gemini-1.5-pro');
+  });
+
+  it('should allow updating UI customizations and agent parameters via setters', () => {
+    const state = useConfigStore.getState();
+    
+    state.setTheme('cyberpunk');
+    state.setFontSize('large');
+    state.setAccentColor('rose');
+    state.setSystemPrompt('Hello world');
+    state.setTemperature(0.9);
+    state.setModelName('gemini-1.5-flash');
+
+    const updatedState = useConfigStore.getState();
+    expect(updatedState.theme).toBe('cyberpunk');
+    expect(updatedState.fontSize).toBe('large');
+    expect(updatedState.accentColor).toBe('rose');
+    expect(updatedState.systemPrompt).toBe('Hello world');
+    expect(updatedState.temperature).toBe(0.9);
+    expect(updatedState.modelName).toBe('gemini-1.5-flash');
+  });
+
   it('should store apiKey securely in SecureStore and strip it from AsyncStorage', async () => {
     const state = useConfigStore.getState();
     state.setConfig('https://api.vela.local', 'my-secret-key');

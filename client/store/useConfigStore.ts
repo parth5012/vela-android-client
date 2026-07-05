@@ -12,6 +12,18 @@ interface ConfigState {
   setConfig: (url: string, key: string) => void;
   clearConfig: () => void;
   setHasHydrated: (val: boolean) => void;
+  theme: 'deep' | 'slate' | 'cyberpunk';
+  fontSize: 'small' | 'medium' | 'large';
+  accentColor: 'indigo' | 'emerald' | 'rose' | 'amber';
+  systemPrompt: string;
+  temperature: number;
+  modelName: string;
+  setTheme: (theme: 'deep' | 'slate' | 'cyberpunk') => void;
+  setFontSize: (size: 'small' | 'medium' | 'large') => void;
+  setAccentColor: (color: 'indigo' | 'emerald' | 'rose' | 'amber') => void;
+  setSystemPrompt: (prompt: string) => void;
+  setTemperature: (temp: number) => void;
+  setModelName: (model: string) => void;
 }
 
 const SECURE_KEY = 'vela-api-key';
@@ -73,9 +85,32 @@ export const useConfigStore = create<ConfigState>()(
       apiKey: '',
       isConfigured: false,
       hasHydrated: false,
+      theme: 'deep',
+      fontSize: 'medium',
+      accentColor: 'indigo',
+      systemPrompt: 'You are an autonomous research agent.',
+      temperature: 0.7,
+      modelName: 'gemini-1.5-pro',
       setConfig: (url, key) => set({ apiUrl: url, apiKey: key, isConfigured: true }),
-      clearConfig: () => set({ apiUrl: '', apiKey: '', isConfigured: false }),
+      clearConfig: () =>
+        set({
+          apiUrl: '',
+          apiKey: '',
+          isConfigured: false,
+          theme: 'deep',
+          fontSize: 'medium',
+          accentColor: 'indigo',
+          systemPrompt: 'You are an autonomous research agent.',
+          temperature: 0.7,
+          modelName: 'gemini-1.5-pro',
+        }),
       setHasHydrated: (val) => set({ hasHydrated: val }),
+      setTheme: (theme) => set({ theme }),
+      setFontSize: (fontSize) => set({ fontSize }),
+      setAccentColor: (accentColor) => set({ accentColor }),
+      setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
+      setTemperature: (temperature) => set({ temperature }),
+      setModelName: (modelName) => set({ modelName }),
     }),
     {
       name: 'vela-config-storage',
