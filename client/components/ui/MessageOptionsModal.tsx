@@ -34,48 +34,93 @@ export default function MessageOptionsModal({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="slide"
       transparent={true}
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.modalContent}>
+        <Pressable style={styles.modalContent} onPress={() => {}}>
+          <View style={styles.dragHandle} />
           <Text style={styles.title}>Message Options</Text>
 
-          <Pressable style={styles.optionButton} onPress={() => { onDownloadMd(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onDownloadMd(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>📄</Text>
-            <Text style={styles.optionText}>Download as MD</Text>
+            <Text style={styles.optionButtonText}>Download as MD</Text>
           </Pressable>
 
-          <Pressable style={styles.optionButton} onPress={() => { onRegenerate(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onRegenerate(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>🔄</Text>
-            <Text style={styles.optionText}>Regenerate Response</Text>
+            <Text style={styles.optionButtonText}>Regenerate Response</Text>
           </Pressable>
 
-          <Pressable style={styles.optionButton} onPress={() => { onToggleRaw(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onToggleRaw(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>👁️</Text>
-            <Text style={styles.optionText}>{isRaw ? 'Show Rendered Markdown' : 'Show Raw Markdown'}</Text>
+            <Text style={styles.optionButtonText}>
+              {isRaw ? 'Show Rendered Markdown' : 'Show Raw Markdown'}
+            </Text>
           </Pressable>
 
-          <Pressable style={styles.optionButton} onPress={() => { onBranch(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onBranch(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>🌿</Text>
-            <Text style={styles.optionText}>Branch Conversation</Text>
+            <Text style={styles.optionButtonText}>Branch Conversation</Text>
           </Pressable>
 
-          <Pressable style={styles.optionButton} onPress={() => { onCopyCodeBlocks(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onCopyCodeBlocks(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>💻</Text>
-            <Text style={styles.optionText}>Copy Code Blocks Only</Text>
+            <Text style={styles.optionButtonText}>Copy Code Blocks Only</Text>
           </Pressable>
 
-          <Pressable style={styles.optionButton} onPress={() => { onShowInfo(); onClose(); }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.optionButtonPressed,
+            ]}
+            onPress={() => { onShowInfo(); onClose(); }}
+          >
             <Text style={styles.optionIcon}>ℹ️</Text>
-            <Text style={styles.optionText}>Response Info</Text>
+            <Text style={styles.optionButtonText}>Response Info</Text>
           </Pressable>
 
-          <Pressable style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelText}>Cancel</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.cancelButtonPressed,
+            ]}
+            onPress={onClose}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );
@@ -85,53 +130,72 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(2, 6, 23, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#0b1329',
-    borderRadius: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderWidth: 1,
     borderColor: '#1e294b',
-    padding: 20,
-    width: '85%',
-    maxWidth: 320,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    width: '100%',
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#334155',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 20,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: '#94a3b8',
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
   },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: '#111a36',
-    marginBottom: 8,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#1e294b',
   },
+  optionButtonPressed: {
+    backgroundColor: '#1b254b',
+  },
   optionIcon: {
     fontSize: 18,
-    marginRight: 12,
   },
-  optionText: {
+  optionButtonText: {
     color: '#cbd5e1',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    marginLeft: 12,
   },
   cancelButton: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  cancelText: {
+  cancelButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  cancelButtonText: {
     color: '#64748b',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
 });
