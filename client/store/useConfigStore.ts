@@ -19,6 +19,7 @@ interface ConfigState {
   temperature: number;
   modelName: string;
   defaultPersona: string;
+  userName: string;
   setTheme: (theme: 'deep' | 'slate' | 'cyberpunk') => void;
   setFontSize: (size: 'small' | 'medium' | 'large') => void;
   setAccentColor: (color: 'indigo' | 'emerald' | 'rose' | 'amber') => void;
@@ -26,6 +27,7 @@ interface ConfigState {
   setTemperature: (temp: number) => void;
   setModelName: (model: string) => void;
   setDefaultPersona: (persona: string) => void;
+  setUserName: (name: string) => void;
 }
 
 const SECURE_KEY = 'vela-api-key';
@@ -94,6 +96,7 @@ export const useConfigStore = create<ConfigState>()(
       temperature: 0.7,
       modelName: 'gemini-1.5-pro',
       defaultPersona: 'personal assistant',
+      userName: 'Parth',
       setConfig: (url, key) => set({ apiUrl: url, apiKey: key, isConfigured: true }),
       clearConfig: () =>
         set({
@@ -107,6 +110,7 @@ export const useConfigStore = create<ConfigState>()(
           temperature: 0.7,
           modelName: 'gemini-1.5-pro',
           defaultPersona: 'personal assistant',
+          userName: 'Parth',
         }),
       setHasHydrated: (val) => set({ hasHydrated: val }),
       setTheme: (theme) => set({ theme }),
@@ -116,6 +120,7 @@ export const useConfigStore = create<ConfigState>()(
       setTemperature: (temperature) => set({ temperature }),
       setModelName: (modelName) => set({ modelName }),
       setDefaultPersona: (defaultPersona) => set({ defaultPersona }),
+      setUserName: (userName) => set({ userName }),
     }),
     {
       name: 'vela-config-storage',

@@ -38,6 +38,8 @@ export default function SettingsScreen() {
     setModelName,
     defaultPersona,
     setDefaultPersona,
+    userName,
+    setUserName,
   } = useConfigStore();
   const { clearStore } = useChatStore();
   const router = useRouter();
@@ -232,6 +234,18 @@ export default function SettingsScreen() {
         </Text>
 
         <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* User Name */}
+          <View style={styles.controlGroup}>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>User Name</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
+              placeholder="Enter your name"
+              placeholderTextColor={colors.textDark}
+              value={userName}
+              onChangeText={setUserName}
+              autoCorrect={false}
+            />
+          </View>
           {/* App Theme */}
           <View style={styles.controlGroup}>
             <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>App Theme</Text>
