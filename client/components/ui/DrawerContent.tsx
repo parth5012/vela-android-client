@@ -6,12 +6,14 @@ import {
   Pressable,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { useConfigStore } from '../../store/useConfigStore';
 import { useChatStore, Thread } from '../../store/useChatStore';
 import ThreadOptionsModal from './ThreadOptionsModal';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../../utils/theme';
+import { syncHistoryWithBackend } from '../../utils/history';
 
 const generateId = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -26,9 +28,23 @@ export default function DrawerContent() {
   const activeThreadId = useChatStore((state) => state.activeThreadId);
   const createThread = useChatStore((state) => state.createThread);
   const selectThread = useChatStore((state) => state.selectThread);
-  const { apiUrl, theme, fontSize, accentColor, defaultPersona } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor, defaultPersona } = useConfigStore();
   const router = useRouter();
   const navigation = useNavigation<any>();
+
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  const handleRefresh = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await syncHistoryWithBackend(apiUrl, apiKey);
+    } catch (err) {
+      console.error('[DrawerContent] Error refreshing chats:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
@@ -166,6 +182,25 @@ export default function DrawerContent() {
           }}
         >
           <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>💬 Chat</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.settingsButton, 
+            pressed && styles.settingsButtonPressed,
+            pressed && { backgroundColor: colors.card },
+            { marginBottom: 8, flexDirection: 'row', alignItems: 'center' }
+          ]}
+          onPress={handleRefresh}
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
+            <ActivityIndicator size="small" color={accentHex} style={{ marginRight: 10 }} />
+          ) : (
+            <Text style={{ marginRight: 10, fontSize: 14 }}>🔄</Text>
+          )}
+          <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>
+            {isSyncing ? 'Syncing...' : 'Refresh Chats'}
+          </Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [

@@ -13,7 +13,9 @@ import {
   Share,
   Alert,
   ScrollView,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -67,6 +69,47 @@ export default function ChatScreen() {
   const [activeMenuMessage, setActiveMenuMessage] = useState<Message | null>(null);
   const [showRawMap, setShowRawMap] = useState<Record<string, boolean>>({});
   const [personas, setPersonas] = useState<any[]>(DEFAULT_PERSONAS);
+
+  // Animated values and references for collapsing persona selector bar
+  const personaBarHeight = React.useRef(new Animated.Value(58)).current;
+  const lastOffsetY = React.useRef(0);
+  const isPersonaBarVisible = React.useRef(true);
+
+  const handleScroll = useCallback((event: any) => {
+    const currentOffset = event.nativeEvent.contentOffset.y;
+    const diff = currentOffset - lastOffsetY.current;
+
+    // Only collapse if we have scrolled past a small offset threshold
+    if (currentOffset > 30) {
+      if (diff > 10 && isPersonaBarVisible.current) {
+        // Scrolling down (towards older messages) -> Hide persona bar
+        isPersonaBarVisible.current = false;
+        Animated.timing(personaBarHeight, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: false,
+        }).start();
+      } else if (diff < -10 && !isPersonaBarVisible.current) {
+        // Scrolling up (towards newer messages) -> Show persona bar
+        isPersonaBarVisible.current = true;
+        Animated.timing(personaBarHeight, {
+          toValue: 58,
+          duration: 180,
+          useNativeDriver: false,
+        }).start();
+      }
+    } else if (currentOffset <= 5 && !isPersonaBarVisible.current) {
+      // Always show when back at the bottom
+      isPersonaBarVisible.current = true;
+      Animated.timing(personaBarHeight, {
+        toValue: 58,
+        duration: 180,
+        useNativeDriver: false,
+      }).start();
+    }
+
+    lastOffsetY.current = currentOffset;
+  }, [personaBarHeight]);
 
   React.useEffect(() => {
     setStreaming(false);
@@ -437,35 +480,46 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Horizontal Persona Selector Bar */}
-      <View style={[styles.personaBar, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaBarContent}>
-          {personas.map((p) => {
-            const activeThread = threads.find((t) => t.id === activeThreadId);
-            const isSelected = (activeThread?.persona || 'personal assistant') === p.id;
-            return (
-              <Pressable
-                key={p.id}
-                style={[
-                  styles.personaPill,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                  isSelected && { backgroundColor: accentHex, borderColor: accentHex }
-                ]}
-                onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
-                disabled={isStreaming}
-              >
-                <Text style={[
-                  styles.personaPillText, 
-                  { color: colors.textMuted, fontSize: sizes.sub },
-                  isSelected && { color: '#ffffff', fontWeight: 'bold' }
-                ]}>
-                  {p.icon} {p.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Horizontal Persona Selector Bar with animated height & right fade-out gradient */}
+      <Animated.View style={{ height: personaBarHeight, overflow: 'hidden' }}>
+        <View style={[styles.personaBar, { borderBottomColor: colors.border, backgroundColor: colors.background, height: '100%', justifyContent: 'center' }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaBarContent}>
+            {personas.map((p) => {
+              const activeThread = threads.find((t) => t.id === activeThreadId);
+              const isSelected = (activeThread?.persona || 'personal assistant') === p.id;
+              return (
+                <Pressable
+                  key={p.id}
+                  style={[
+                    styles.personaPill,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+                  ]}
+                  onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
+                  disabled={isStreaming}
+                >
+                  <Text style={[
+                    styles.personaPillText, 
+                    { color: colors.textMuted, fontSize: sizes.sub },
+                    isSelected && { color: '#ffffff', fontWeight: 'bold' }
+                  ]}>
+                    {p.icon} {p.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Right edge fade-out gradient */}
+          <LinearGradient
+            colors={['transparent', colors.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.rightFadeGradient}
+            pointerEvents="none"
+          />
+        </View>
+      </Animated.View>
 
       <FlatList
         data={reversedMessages}
@@ -474,6 +528,8 @@ export default function ChatScreen() {
         contentContainerStyle={styles.listContent}
         inverted={true}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         ListEmptyComponent={
           <View style={[styles.emptyChat, { transform: [{ scaleY: -1 }] }]}>
             <Text style={[styles.emptyText, { color: colors.textDark, fontSize: sizes.text }]}>
@@ -748,6 +804,13 @@ const styles = StyleSheet.create({
   },
   personaPillText: {
     fontWeight: '500',
+  },
+  rightFadeGradient: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 40,
   },
 });
 
