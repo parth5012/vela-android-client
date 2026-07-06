@@ -1,27 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
+import { useChatStore } from '../store/useChatStore';
 import DrawerContent from '../components/ui/DrawerContent';
 import HealthIndicator from '../components/ui/HealthIndicator';
 import { Platform } from 'react-native';
-import LandingScreen from '../components/ui/LandingScreen';
 
 
 export default function RootLayout() {
   const isConfigured = useConfigStore((state) => state.isConfigured);
   const hasHydrated = useConfigStore((state) => state.hasHydrated);
-  const theme = useConfigStore((state) => state.theme);
-  const accentColor = useConfigStore((state) => state.accentColor);
-  const userName = useConfigStore((state) => state.userName) || 'Parth';
 
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const isRouterReady = navigationState?.key !== undefined;
 
-  const [showLanding, setShowLanding] = useState(true);
+  useEffect(() => {
+    if (hasHydrated) {
+      // Force user to land on the welcome/new conversation screen on app launch
+      useChatStore.getState().selectThread(null);
+    }
+  }, [hasHydrated]);
 
   useEffect(() => {
     if (!hasHydrated || !isRouterReady) return;
@@ -31,7 +33,6 @@ export default function RootLayout() {
     if (!isConfigured && !inSetupGroup) {
       // User is not configured and not on setup, redirect to /setup
       router.replace('/setup');
-      setShowLanding(false);
     } else if (isConfigured && inSetupGroup) {
       // User is configured but on setup, redirect back to home /
       router.replace('/');
@@ -45,18 +46,6 @@ export default function RootLayout() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#818cf8" />
       </View>
-    );
-  }
-
-  // If we are configured, show the landing screen first
-  if (isConfigured && showLanding && !inSetupGroup) {
-    return (
-      <LandingScreen
-        userName={userName}
-        theme={theme}
-        accentColor={accentColor}
-        onFinished={() => setShowLanding(false)}
-      />
     );
   }
 

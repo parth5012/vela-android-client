@@ -32,7 +32,7 @@ interface ChatState {
   messages: Record<string, Message[]>;
   isStreaming: boolean;
   createThread: (title: string, id: string, persona?: string) => void;
-  selectThread: (id: string) => void;
+  selectThread: (id: string | null) => void;
   deleteThread: (id: string) => void;
   renameThread: (id: string, newTitle: string) => void;
   togglePinThread: (id: string) => void;

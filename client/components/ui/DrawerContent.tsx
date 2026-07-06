@@ -64,8 +64,7 @@ export default function DrawerContent() {
   };
 
   const handleNewChat = () => {
-    const newId = generateId();
-    createThread('New Conversation', newId, defaultPersona);
+    selectThread(null);
     router.navigate('/');
     if (typeof navigation.closeDrawer === 'function') {
       navigation.closeDrawer();

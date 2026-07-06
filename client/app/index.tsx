@@ -41,12 +41,25 @@ const DEFAULT_PERSONAS = [
   { id: 'prompt builder', name: 'Prompt Builder', description: 'Specialized assistant designed to help craft, structure, and refine AI agent prompts.', icon: '✍️' }
 ];
 
+const QUOTES = [
+  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+  { text: "Science is organized knowledge. Wisdom is organized life.", author: "Immanuel Kant" },
+  { text: "The important thing is not to stop questioning.", author: "Albert Einstein" },
+  { text: "Research is creating new knowledge.", author: "Neil Armstrong" },
+  { text: "Somewhere, something incredible is waiting to be known.", author: "Carl Sagan" },
+  { text: "Data! Data! Data! I can't make bricks without clay.", author: "Arthur Conan Doyle" },
+  { text: "Knowledge has to be improved, challenged, and increased constantly.", author: "Peter Drucker" },
+  { text: "Great things are done by a series of small things brought together.", author: "Vincent Van Gogh" },
+  { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
+  { text: "Focus on being productive instead of busy.", author: "Tim Ferriss" }
+];
+
 const generateId = (prefix: string) => {
   return prefix + '_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
 };
 
 export default function ChatScreen() {
-  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona, userName } = useConfigStore();
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
@@ -74,6 +87,10 @@ export default function ChatScreen() {
   const personaBarHeight = React.useRef(new Animated.Value(58)).current;
   const lastOffsetY = React.useRef(0);
   const isPersonaBarVisible = React.useRef(true);
+
+  const [welcomeQuote, setWelcomeQuote] = useState(QUOTES[0]);
+  const [welcomeGreeting, setWelcomeGreeting] = useState('Hello');
+  const [selectedPersona, setSelectedPersona] = useState(defaultPersona || 'personal assistant');
 
   const handleScroll = useCallback((event: any) => {
     const currentOffset = event.nativeEvent.contentOffset.y;
@@ -112,6 +129,20 @@ export default function ChatScreen() {
   }, [personaBarHeight]);
 
   React.useEffect(() => {
+    // Select random quote on mount
+    const randomIdx = Math.floor(Math.random() * QUOTES.length);
+    setWelcomeQuote(QUOTES[randomIdx]);
+
+    // Choose greeting based on time of day
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      setWelcomeGreeting("Good morning");
+    } else if (hour < 17) {
+      setWelcomeGreeting("Good afternoon");
+    } else {
+      setWelcomeGreeting("Good evening");
+    }
+
     setStreaming(false);
   }, []);
 
@@ -422,57 +453,71 @@ export default function ChatScreen() {
   };
 
 
-  const handleStartConversation = (persona?: string) => {
-    const newId = generateUUID();
-    createThread('New Conversation', newId, persona || defaultPersona);
+  const handleSendWelcome = async (textToSend: string, personaId?: string) => {
+    if (!textToSend.trim() || isStreaming) return;
+    Keyboard.dismiss();
+
+    const newThreadId = generateUUID();
+    const persona = personaId || selectedPersona;
+
+    // 1. Create thread in store
+    createThread('New Conversation', newThreadId, persona);
+    setInput('');
+
+    const userMsgId = generateId('msg_user');
+    const assistantMsgId = generateId('msg_assistant');
+
+    // 2. Add user message
+    addMessage(newThreadId, {
+      id: userMsgId,
+      role: 'user',
+      content: textToSend.trim(),
+    });
+
+    // 3. Add empty assistant message
+    addMessage(newThreadId, {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+    });
+
+    setStreaming(true);
+
+    // 4. Stream response
+    await streamAgentResponse(
+      apiUrl,
+      apiKey,
+      newThreadId,
+      textToSend.trim(),
+      (chunk) => {
+        appendToken(newThreadId, chunk);
+      },
+      (newTitle) => {
+        setStreaming(false);
+        if (newTitle) {
+          useChatStore.getState().renameThread(newThreadId, newTitle);
+        }
+      },
+      (error) => {
+        setStreaming(false);
+        const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
+        appendToken(
+          newThreadId,
+          `\n\n⚠️ **Error:** ${errMsg}`
+        );
+      },
+      undefined,
+      persona
+    );
   };
 
-  if (!activeThreadId || threads.length === 0) {
-    return (
-      <View style={[styles.welcomeContainer, { backgroundColor: colors.background }]}>
-        <ScrollView contentContainerStyle={styles.welcomeScrollContent} style={styles.welcomeScrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.welcomeContent}>
-            <Text style={[styles.welcomeLogo, { color: accentHex, fontSize: sizes.logo }]}>VELA</Text>
-            <Text style={[styles.welcomeTitle, { color: colors.text, fontSize: sizes.title }]}>Welcome to Vela</Text>
-            <Text style={[styles.welcomeSubtitle, { color: colors.textMuted, fontSize: sizes.text, lineHeight: sizes.text * 1.5 }]}>
-              Your localized autonomous research agent node. Ready to analyze code, write equations, and execute pipelines.
-            </Text>
-
-            <Text style={[styles.welcomeSectionTitle, { color: colors.text, fontSize: sizes.text + 2 }]}>
-              Select a Persona to begin:
-            </Text>
-
-            <View style={styles.personaGrid}>
-              {personas.map((p) => (
-                <Pressable
-                  key={p.id}
-                  style={({ pressed }) => [
-                    styles.personaCard,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    pressed && { opacity: 0.8 }
-                  ]}
-                  onPress={() => handleStartConversation(p.id)}
-                >
-                  <View style={styles.personaCardHeader}>
-                    <Text style={styles.personaCardIcon}>{p.icon}</Text>
-                    <Text style={[styles.personaCardName, { color: colors.text, fontSize: sizes.text, fontWeight: '700' }]}>{p.name}</Text>
-                  </View>
-                  <Text style={[styles.personaCardDesc, { color: colors.textMuted, fontSize: sizes.sub }]}>{p.description}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Pressable 
-              style={[styles.welcomeButton, { backgroundColor: accentHex, marginTop: 24 }]} 
-              onPress={() => handleStartConversation()}
-            >
-              <Text style={[styles.welcomeButtonText, { fontSize: sizes.text }]}>Start Default Chat</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
+  const handleSendPress = () => {
+    if (activeThreadId) {
+      handleSend();
+    } else {
+      handleSendWelcome(input);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -480,69 +525,151 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Horizontal Persona Selector Bar with animated height & right fade-out gradient */}
-      <Animated.View style={{ height: personaBarHeight, overflow: 'hidden' }}>
-        <View style={[styles.personaBar, { borderBottomColor: colors.border, backgroundColor: colors.background, height: '100%', justifyContent: 'center' }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaBarContent}>
-            {personas.map((p) => {
-              const activeThread = threads.find((t) => t.id === activeThreadId);
-              const isSelected = (activeThread?.persona || 'personal assistant') === p.id;
-              return (
+      {activeThreadId ? (
+        <>
+          {/* Horizontal Persona Selector Bar with animated height & right fade-out gradient */}
+          <Animated.View style={{ height: personaBarHeight, overflow: 'hidden' }}>
+            <View style={[styles.personaBar, { borderBottomColor: colors.border, backgroundColor: colors.background, height: '100%', justifyContent: 'center' }]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaBarContent}>
+                {personas.map((p) => {
+                  const activeThread = threads.find((t) => t.id === activeThreadId);
+                  const isSelected = (activeThread?.persona || 'personal assistant') === p.id;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      style={[
+                        styles.personaPill,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+                      ]}
+                      onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
+                      disabled={isStreaming}
+                    >
+                      <Text style={[
+                        styles.personaPillText, 
+                        { color: colors.textMuted, fontSize: sizes.sub },
+                        isSelected && { color: '#ffffff', fontWeight: 'bold' }
+                      ]}>
+                        {p.icon} {p.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Right edge fade-out gradient */}
+              <LinearGradient
+                colors={['transparent', colors.background]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.rightFadeGradient}
+                pointerEvents="none"
+              />
+            </View>
+          </Animated.View>
+
+          <FlatList
+            data={reversedMessages}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            inverted={true}
+            keyboardShouldPersistTaps="handled"
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            ListEmptyComponent={
+              <View style={[styles.emptyChat, { transform: [{ scaleY: -1 }] }]}>
+                <Text style={[styles.emptyText, { color: colors.textDark, fontSize: sizes.text }]}>
+                  Thread initialized. Say hello to get started.
+                </Text>
+              </View>
+            }
+          />
+        </>
+      ) : (
+        /* Gemini Landing / Welcome View */
+        <ScrollView 
+          contentContainerStyle={styles.welcomeScrollContent} 
+          style={styles.welcomeScrollView} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.welcomeContent}>
+            {/* Header Greeting */}
+            <Text style={[styles.welcomeGreeting, { color: colors.text, fontSize: sizes.title + 4 }]}>
+              {welcomeGreeting}, <Text style={{ color: accentHex, fontWeight: '800' }}>{userName}</Text>
+            </Text>
+            <Text style={[styles.welcomeSubtitle, { color: colors.textMuted, fontSize: sizes.text }]}>
+              How can I help you research today?
+            </Text>
+
+            {/* Random Quote */}
+            <View style={[styles.quoteContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.quoteText, { color: colors.text }]}>“{welcomeQuote.text}”</Text>
+              <Text style={[styles.quoteAuthor, { color: colors.textMuted }]}>— {welcomeQuote.author}</Text>
+            </View>
+
+            {/* Suggestion Starter Cards */}
+            <Text style={[styles.sectionTitleLabel, { color: colors.text, fontSize: sizes.text }]}>Suggestions</Text>
+            <View style={styles.suggestionsContainer}>
+              {[
+                { label: '👩‍🏫 Teach Concept', text: 'Teach me the intuition behind binary search and trace an example', persona: 'teacher' },
+                { label: '📊 Data Analyst', text: 'Analyze the key features of the 2026 FIFA World Cup matches', persona: 'analyst' },
+                { label: '✍️ Prompt Architect', text: 'Help me draft a detailed system prompt for a weather assistant bot', persona: 'prompt builder' }
+              ].map((item, idx) => (
                 <Pressable
-                  key={p.id}
-                  style={[
-                    styles.personaPill,
+                  key={idx}
+                  style={({ pressed }) => [
+                    styles.suggestionCard,
                     { backgroundColor: colors.card, borderColor: colors.border },
-                    isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+                    pressed && { opacity: 0.8 }
                   ]}
-                  onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
-                  disabled={isStreaming}
+                  onPress={() => handleSendWelcome(item.text, item.persona)}
                 >
-                  <Text style={[
-                    styles.personaPillText, 
-                    { color: colors.textMuted, fontSize: sizes.sub },
-                    isSelected && { color: '#ffffff', fontWeight: 'bold' }
-                  ]}>
-                    {p.icon} {p.name}
+                  <Text style={[styles.suggestionText, { color: colors.text, fontSize: sizes.text - 1 }]}>
+                    {item.label}: <Text style={{ color: colors.textMuted }}>"{item.text}"</Text>
                   </Text>
                 </Pressable>
-              );
-            })}
-          </ScrollView>
+              ))}
+            </View>
 
-          {/* Right edge fade-out gradient */}
-          <LinearGradient
-            colors={['transparent', colors.background]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.rightFadeGradient}
-            pointerEvents="none"
-          />
-        </View>
-      </Animated.View>
-
-      <FlatList
-        data={reversedMessages}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        inverted={true}
-        keyboardShouldPersistTaps="handled"
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        ListEmptyComponent={
-          <View style={[styles.emptyChat, { transform: [{ scaleY: -1 }] }]}>
-            <Text style={[styles.emptyText, { color: colors.textDark, fontSize: sizes.text }]}>
-              Thread initialized. Say hello to get started.
+            {/* Persona Quick Selector */}
+            <Text style={[styles.sectionTitleLabel, { color: colors.text, fontSize: sizes.text, marginTop: 12 }]}>
+              Choose Persona
             </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaScrollContainer}>
+              {personas.map((p) => {
+                const isSelected = selectedPersona === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    style={[
+                      styles.personaPill,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+                    ]}
+                    onPress={() => setSelectedPersona(p.id)}
+                  >
+                    <Text style={[
+                      styles.personaPillText,
+                      { color: colors.textMuted, fontSize: sizes.sub },
+                      isSelected && { color: '#ffffff', fontWeight: 'bold' }
+                    ]}>
+                      {p.icon} {p.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
-        }
-      />
+        </ScrollView>
+      )}
 
+      {/* Unifying Input container at the bottom */}
       <View style={[styles.inputContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text, fontSize: sizes.text }]}
-          placeholder="Ask a question or request a task..."
+          placeholder={activeThreadId ? "Ask a question or request a task..." : "Ask Vela anything..."}
           placeholderTextColor={colors.textDark}
           value={input}
           onChangeText={setInput}
@@ -558,7 +685,7 @@ export default function ChatScreen() {
             pressed && styles.sendButtonPressed,
             pressed && { backgroundColor: accentHex + 'cc' },
           ]}
-          onPress={handleSend}
+          onPress={handleSendPress}
           disabled={!input.trim() || isStreaming}
         >
           <Text style={[styles.sendButtonText, { fontSize: sizes.text }]}>Send</Text>
@@ -757,36 +884,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
-  welcomeSectionTitle: {
-    alignSelf: 'flex-start',
-    marginTop: 24,
-    marginBottom: 12,
+  welcomeContent: {
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  welcomeGreeting: {
     fontWeight: 'bold',
+    marginTop: 24,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  personaGrid: {
-    width: '100%',
-    gap: 12,
+  welcomeSubtitle: {
+    textAlign: 'center',
+    marginBottom: 16,
   },
-  personaCard: {
-    width: '100%',
-    borderRadius: 10,
+  quoteContainer: {
+    borderRadius: 12,
     borderWidth: 1,
     padding: 16,
+    marginVertical: 16,
+    width: '100%',
   },
-  personaCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
+  quoteText: {
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontSize: 13,
   },
-  personaCardIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  personaCardName: {
+  quoteAuthor: {
+    textAlign: 'right',
+    fontSize: 10,
+    marginTop: 8,
     fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
-  personaCardDesc: {
+  sectionTitleLabel: {
+    alignSelf: 'flex-start',
+    fontWeight: '700',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  suggestionsContainer: {
+    width: '100%',
+    gap: 8,
+    marginBottom: 16,
+  },
+  suggestionCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    width: '100%',
+  },
+  suggestionText: {
+    fontWeight: '600',
     lineHeight: 18,
+  },
+  personaScrollContainer: {
+    gap: 8,
+    paddingVertical: 4,
+    marginBottom: 20,
   },
   personaBar: {
     borderBottomWidth: 1,
