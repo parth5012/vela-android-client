@@ -24,12 +24,27 @@ import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
 import RichText from '../components/chat/RichText';
 import { streamAgentResponse } from '../utils/sse';
 
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+const DEFAULT_PERSONAS = [
+  { id: 'personal assistant', name: 'Personal Assistant', description: 'Warm, approachable, and direct general assistant.', icon: '🤖' },
+  { id: 'teacher', name: 'Teacher', description: 'Patient, encouraging pedagogical guide that explains concepts clearly.', icon: '👩‍🏫' },
+  { id: 'analyst', name: 'Analyst', description: 'Structured, logical, data-driven analyst focusing on facts and risk assessment.', icon: '📊' },
+  { id: 'prompt builder', name: 'Prompt Builder', description: 'Specialized assistant designed to help craft, structure, and refine AI agent prompts.', icon: '✍️' }
+];
+
 const generateId = (prefix: string) => {
   return prefix + '_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
 };
 
 export default function ChatScreen() {
-  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona } = useConfigStore();
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
@@ -45,15 +60,43 @@ export default function ChatScreen() {
     setStreaming,
     truncateThreadHistory,
     branchThread,
+    setThreadPersona,
   } = useChatStore();
 
   const [input, setInput] = useState('');
   const [activeMenuMessage, setActiveMenuMessage] = useState<Message | null>(null);
   const [showRawMap, setShowRawMap] = useState<Record<string, boolean>>({});
+  const [personas, setPersonas] = useState<any[]>(DEFAULT_PERSONAS);
 
   React.useEffect(() => {
     setStreaming(false);
   }, []);
+
+  React.useEffect(() => {
+    if (apiUrl && apiKey) {
+      const fetchPersonas = async () => {
+        try {
+          const res = await fetch(`${apiUrl}/chat/personas`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const mapped = data.map((p: any) => {
+              let icon = '🤖';
+              if (p.id === 'teacher') icon = '👩‍🏫';
+              else if (p.id === 'analyst') icon = '📊';
+              else if (p.id === 'prompt builder') icon = '✍️';
+              return { ...p, icon };
+            });
+            setPersonas(mapped);
+          }
+        } catch (err) {
+          console.error('[fetchPersonas] Failed:', err);
+        }
+      };
+      fetchPersonas();
+    }
+  }, [apiUrl, apiKey]);
 
   const activeMessages = activeThreadId ? messages[activeThreadId] || [] : [];
   const reversedMessages = useMemo(() => {
@@ -161,7 +204,7 @@ export default function ChatScreen() {
 
   const handleBranch = useCallback(async (message: Message) => {
     if (!activeThreadId) return;
-    const newThreadId = 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+    const newThreadId = generateUUID();
     await branchThread(activeThreadId, message.id, newThreadId, 'Branched Conversation');
     Alert.alert('Success', 'Branched to a new conversation.');
   }, [activeThreadId, branchThread]);
@@ -300,6 +343,9 @@ export default function ChatScreen() {
 
     setStreaming(true);
 
+    const activeThread = threads.find((t) => t.id === activeThreadId);
+    const selectedPersona = activeThread?.persona || 'personal assistant';
+
     // 3. Connect to backend stream
     await streamAgentResponse(
       apiUrl,
@@ -326,32 +372,61 @@ export default function ChatScreen() {
           activeThreadId,
           `\n\n⚠️ **Error:** ${errMsg}`
         );
-      }
+      },
+      undefined,
+      selectedPersona
     );
   };
 
 
-  const handleStartConversation = () => {
-    const newId = 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-    createThread('New Conversation', newId);
+  const handleStartConversation = (persona?: string) => {
+    const newId = generateUUID();
+    createThread('New Conversation', newId, persona || defaultPersona);
   };
 
   if (!activeThreadId || threads.length === 0) {
     return (
       <View style={[styles.welcomeContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.welcomeContent}>
-          <Text style={[styles.welcomeLogo, { color: accentHex, fontSize: sizes.logo }]}>VELA</Text>
-          <Text style={[styles.welcomeTitle, { color: colors.text, fontSize: sizes.title }]}>Welcome to Vela</Text>
-          <Text style={[styles.welcomeSubtitle, { color: colors.textMuted, fontSize: sizes.text, lineHeight: sizes.text * 1.5 }]}>
-            Your localized autonomous research agent node. Ready to analyze code, write equations, and execute pipelines.
-          </Text>
-          <Pressable 
-            style={[styles.welcomeButton, { backgroundColor: accentHex }]} 
-            onPress={handleStartConversation}
-          >
-            <Text style={[styles.welcomeButtonText, { fontSize: sizes.text }]}>Start a Conversation</Text>
-          </Pressable>
-        </View>
+        <ScrollView contentContainerStyle={styles.welcomeScrollContent} style={styles.welcomeScrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.welcomeContent}>
+            <Text style={[styles.welcomeLogo, { color: accentHex, fontSize: sizes.logo }]}>VELA</Text>
+            <Text style={[styles.welcomeTitle, { color: colors.text, fontSize: sizes.title }]}>Welcome to Vela</Text>
+            <Text style={[styles.welcomeSubtitle, { color: colors.textMuted, fontSize: sizes.text, lineHeight: sizes.text * 1.5 }]}>
+              Your localized autonomous research agent node. Ready to analyze code, write equations, and execute pipelines.
+            </Text>
+
+            <Text style={[styles.welcomeSectionTitle, { color: colors.text, fontSize: sizes.text + 2 }]}>
+              Select a Persona to begin:
+            </Text>
+
+            <View style={styles.personaGrid}>
+              {personas.map((p) => (
+                <Pressable
+                  key={p.id}
+                  style={({ pressed }) => [
+                    styles.personaCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => handleStartConversation(p.id)}
+                >
+                  <View style={styles.personaCardHeader}>
+                    <Text style={styles.personaCardIcon}>{p.icon}</Text>
+                    <Text style={[styles.personaCardName, { color: colors.text, fontSize: sizes.text, fontWeight: '700' }]}>{p.name}</Text>
+                  </View>
+                  <Text style={[styles.personaCardDesc, { color: colors.textMuted, fontSize: sizes.sub }]}>{p.description}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable 
+              style={[styles.welcomeButton, { backgroundColor: accentHex, marginTop: 24 }]} 
+              onPress={() => handleStartConversation()}
+            >
+              <Text style={[styles.welcomeButtonText, { fontSize: sizes.text }]}>Start Default Chat</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -362,6 +437,36 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
+      {/* Horizontal Persona Selector Bar */}
+      <View style={[styles.personaBar, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaBarContent}>
+          {personas.map((p) => {
+            const activeThread = threads.find((t) => t.id === activeThreadId);
+            const isSelected = (activeThread?.persona || 'personal assistant') === p.id;
+            return (
+              <Pressable
+                key={p.id}
+                style={[
+                  styles.personaPill,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+                ]}
+                onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
+                disabled={isStreaming}
+              >
+                <Text style={[
+                  styles.personaPillText, 
+                  { color: colors.textMuted, fontSize: sizes.sub },
+                  isSelected && { color: '#ffffff', fontWeight: 'bold' }
+                ]}>
+                  {p.icon} {p.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <FlatList
         data={reversedMessages}
         renderItem={renderItem}
@@ -588,6 +693,61 @@ const styles = StyleSheet.create({
   },
   rawText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  welcomeScrollView: {
+    width: '100%',
+  },
+  welcomeScrollContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  welcomeSectionTitle: {
+    alignSelf: 'flex-start',
+    marginTop: 24,
+    marginBottom: 12,
+    fontWeight: 'bold',
+  },
+  personaGrid: {
+    width: '100%',
+    gap: 12,
+  },
+  personaCard: {
+    width: '100%',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 16,
+  },
+  personaCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  personaCardIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  personaCardName: {
+    fontWeight: 'bold',
+  },
+  personaCardDesc: {
+    lineHeight: 18,
+  },
+  personaBar: {
+    borderBottomWidth: 1,
+    paddingVertical: 10,
+  },
+  personaBarContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  personaPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  personaPillText: {
+    fontWeight: '500',
   },
 });
 

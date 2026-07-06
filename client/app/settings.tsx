@@ -36,6 +36,8 @@ export default function SettingsScreen() {
     setTemperature,
     modelName,
     setModelName,
+    defaultPersona,
+    setDefaultPersona,
   } = useConfigStore();
   const { clearStore } = useChatStore();
   const router = useRouter();
@@ -419,6 +421,44 @@ export default function SettingsScreen() {
               >
                 <Text style={[styles.tempStepButtonText, { color: colors.text, fontSize: sizes.text + 4 }]}>+</Text>
               </Pressable>
+            </View>
+          </View>
+
+          {/* Default Persona */}
+          <View style={styles.controlGroup}>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Default Persona</Text>
+            <View style={styles.row}>
+              {[
+                { id: 'personal assistant', name: 'Assistant' },
+                { id: 'teacher', name: 'Teacher' },
+                { id: 'analyst', name: 'Analyst' },
+                { id: 'prompt builder', name: 'Builder' },
+              ].map((p) => {
+                const isSelected = defaultPersona === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    style={[
+                      styles.pillButton,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      isSelected && { borderColor: accentHex },
+                      isSelected && styles.pillButtonActive,
+                    ]}
+                    onPress={() => setDefaultPersona(p.id)}
+                  >
+                    <Text 
+                      style={[
+                        styles.pillButtonText, 
+                        { color: colors.textMuted, fontSize: sizes.text - 1 },
+                        isSelected && styles.pillButtonTextActive,
+                        isSelected && { color: colors.text }
+                      ]}
+                    >
+                      {p.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 

@@ -23,6 +23,7 @@ export interface Thread {
   title: string;
   updated_at: string;
   is_pinned?: boolean;
+  persona?: string;
 }
 
 interface ChatState {
@@ -30,11 +31,12 @@ interface ChatState {
   activeThreadId: string | null;
   messages: Record<string, Message[]>;
   isStreaming: boolean;
-  createThread: (title: string, id: string) => void;
+  createThread: (title: string, id: string, persona?: string) => void;
   selectThread: (id: string) => void;
   deleteThread: (id: string) => void;
   renameThread: (id: string, newTitle: string) => void;
   togglePinThread: (id: string) => void;
+  setThreadPersona: (threadId: string, persona: string) => void;
   addMessage: (threadId: string, message: Message) => void;
   appendToken: (threadId: string, token: string) => void;
   setThreads: (threads: Thread[]) => void;
@@ -52,8 +54,8 @@ export const useChatStore = create<ChatState>()(
       activeThreadId: null,
       messages: {},
       isStreaming: false,
-      createThread: (title, id) => set((state) => ({
-        threads: [{ id, title, updated_at: new Date().toISOString() }, ...state.threads],
+      createThread: (title, id, persona = 'personal assistant') => set((state) => ({
+        threads: [{ id, title, persona, updated_at: new Date().toISOString() }, ...state.threads],
         activeThreadId: id,
         messages: { ...state.messages, [id]: [] }
       })),
@@ -115,11 +117,39 @@ export const useChatStore = create<ChatState>()(
           }
         };
       }),
-      renameThread: (id, newTitle) => set((state) => ({
-        threads: state.threads.map((t) => t.id === id ? { ...t, title: newTitle } : t)
-      })),
+      renameThread: async (id, newTitle) => {
+        const config = useConfigStore.getState();
+        if (config.apiUrl && config.apiKey) {
+          const formattedUrl = normalizeUrl(config.apiUrl);
+          try {
+            const res = await fetch(`${formattedUrl}/chats/threads`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey.trim()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                thread_id: id,
+                title: newTitle,
+              }),
+            });
+            if (!res.ok) {
+              console.error(`[renameThread] Backend rename returned status: ${res.status}`);
+            }
+          } catch (err) {
+            console.error('[renameThread] Failed to rename on backend:', err);
+          }
+        }
+
+        set((state) => ({
+          threads: state.threads.map((t) => t.id === id ? { ...t, title: newTitle } : t)
+        }));
+      },
       togglePinThread: (id) => set((state) => ({
         threads: state.threads.map((t) => t.id === id ? { ...t, is_pinned: !t.is_pinned } : t)
+      })),
+      setThreadPersona: (threadId, persona) => set((state) => ({
+        threads: state.threads.map((t) => t.id === threadId ? { ...t, persona } : t)
       })),
       setThreads: (threads) => set({ threads }),
       setHistory: (threadId, history) => set((state) => ({

@@ -14,7 +14,11 @@ import ThreadOptionsModal from './ThreadOptionsModal';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../../utils/theme';
 
 const generateId = () => {
-  return 'thread_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 };
 
 export default function DrawerContent() {
@@ -22,7 +26,7 @@ export default function DrawerContent() {
   const activeThreadId = useChatStore((state) => state.activeThreadId);
   const createThread = useChatStore((state) => state.createThread);
   const selectThread = useChatStore((state) => state.selectThread);
-  const { apiUrl, theme, fontSize, accentColor } = useConfigStore();
+  const { apiUrl, theme, fontSize, accentColor, defaultPersona } = useConfigStore();
   const router = useRouter();
   const navigation = useNavigation<any>();
 
@@ -45,7 +49,7 @@ export default function DrawerContent() {
 
   const handleNewChat = () => {
     const newId = generateId();
-    createThread('New Conversation', newId);
+    createThread('New Conversation', newId, defaultPersona);
     router.navigate('/');
     if (typeof navigation.closeDrawer === 'function') {
       navigation.closeDrawer();

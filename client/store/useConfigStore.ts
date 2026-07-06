@@ -18,12 +18,14 @@ interface ConfigState {
   systemPrompt: string;
   temperature: number;
   modelName: string;
+  defaultPersona: string;
   setTheme: (theme: 'deep' | 'slate' | 'cyberpunk') => void;
   setFontSize: (size: 'small' | 'medium' | 'large') => void;
   setAccentColor: (color: 'indigo' | 'emerald' | 'rose' | 'amber') => void;
   setSystemPrompt: (prompt: string) => void;
   setTemperature: (temp: number) => void;
   setModelName: (model: string) => void;
+  setDefaultPersona: (persona: string) => void;
 }
 
 const SECURE_KEY = 'vela-api-key';
@@ -91,6 +93,7 @@ export const useConfigStore = create<ConfigState>()(
       systemPrompt: 'You are an autonomous research agent.',
       temperature: 0.7,
       modelName: 'gemini-1.5-pro',
+      defaultPersona: 'personal assistant',
       setConfig: (url, key) => set({ apiUrl: url, apiKey: key, isConfigured: true }),
       clearConfig: () =>
         set({
@@ -103,6 +106,7 @@ export const useConfigStore = create<ConfigState>()(
           systemPrompt: 'You are an autonomous research agent.',
           temperature: 0.7,
           modelName: 'gemini-1.5-pro',
+          defaultPersona: 'personal assistant',
         }),
       setHasHydrated: (val) => set({ hasHydrated: val }),
       setTheme: (theme) => set({ theme }),
@@ -111,6 +115,7 @@ export const useConfigStore = create<ConfigState>()(
       setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
       setTemperature: (temperature) => set({ temperature }),
       setModelName: (modelName) => set({ modelName }),
+      setDefaultPersona: (defaultPersona) => set({ defaultPersona }),
     }),
     {
       name: 'vela-config-storage',

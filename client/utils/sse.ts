@@ -8,7 +8,8 @@ export async function streamAgentResponse(
   onChunk: (chunk: string) => void,
   onDone: (newTitle?: string) => void,
   onError: (error: Error) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  persona?: string
 ) {
   try {
     const sseFetch = Platform.OS !== 'web' && process.env.NODE_ENV !== 'test'
@@ -22,7 +23,7 @@ export async function streamAgentResponse(
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'text/event-stream',
       },
-      body: JSON.stringify({ thread_id: threadId, message }),
+      body: JSON.stringify({ thread_id: threadId, message, persona }),
       signal,
       ...((Platform.OS !== 'web' && process.env.NODE_ENV !== 'test') ? {
         reactNative: { textStreaming: true }
