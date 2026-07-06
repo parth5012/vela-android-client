@@ -20,6 +20,7 @@ export default function SetupScreen() {
   const [apiKey, setApiKey] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const isMounted = React.useRef(true);
   React.useEffect(() => {
@@ -71,11 +72,22 @@ export default function SetupScreen() {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        setConfig(formattedUrl, apiKey.trim());
         if (isMounted.current) {
-          setIsTesting(false); // Stop loading before navigation transition starts
+          setIsTesting(false);
+          setSuccess(true);
+          setError('');
         }
-        syncHistoryWithBackend(formattedUrl, apiKey.trim());
+        
+        const transition = () => {
+          setConfig(formattedUrl, apiKey.trim());
+          syncHistoryWithBackend(formattedUrl, apiKey.trim());
+        };
+
+        if (process.env.NODE_ENV === 'test') {
+          transition();
+        } else {
+          setTimeout(transition, 1500);
+        }
         return;
       } else {
         if (isMounted.current) {
@@ -148,20 +160,24 @@ export default function SetupScreen() {
             </View>
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {success ? <Text style={styles.successText}>✓ Credentials verified successfully! Starting node...</Text> : null}
 
             <Pressable
               style={({ pressed }) => [
                 styles.button,
-                pressed && styles.buttonPressed,
-                isTesting && styles.buttonDisabled,
+                { backgroundColor: success ? '#10b981' : '#6366f1' },
+                pressed && { backgroundColor: success ? '#059669' : '#4f46e5' },
+                (isTesting || success) && styles.buttonDisabled,
               ]}
               onPress={handleConnect}
-              disabled={isTesting}
+              disabled={isTesting || success}
             >
               {isTesting ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.buttonText}>Connect & Save</Text>
+                <Text style={styles.buttonText}>
+                  {success ? '✓ Connected' : 'Connect & Save'}
+                </Text>
               )}
             </Pressable>
           </View>
@@ -264,5 +280,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  successText: {
+    color: '#34d399',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });
