@@ -117,11 +117,7 @@ export default function RichText({
     <View style={styles.container}>
       {segments.map((segment, index) => {
         if (segment.type === 'markdown') {
-          return (
-            <Markdown key={index} style={dynamicMarkdownStyles}>
-              {segment.content}
-            </Markdown>
-          );
+          return <Markdown key={index} style={dynamicMarkdownStyles}>{segment.content}</Markdown>;
         } else if (segment.type === 'latex-inline') {
           return (
             <LatexRenderer
