@@ -23,3 +23,7 @@ For installing the APK on your own phone for
 
   Once done, rename  app.apks  to  app.zip , extract
   it, and install the  universal.apk .
+
+
+For clean build
+npx expo prebuild --clean
