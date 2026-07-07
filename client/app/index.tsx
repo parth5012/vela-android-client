@@ -25,6 +25,8 @@ import { useChatStore, Message } from '../store/useChatStore';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
 import RichText from '../components/chat/RichText';
 import { streamAgentResponse } from '../utils/sse';
+import CollapsibleBlock from '../components/chat/CollapsibleBlock';
+import { parseMessage } from '../utils/messageParser';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -341,13 +343,55 @@ export default function ChatScreen() {
             </ScrollView>
           ) : item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
             <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
-          ) : (
+          ) : isUser ? (
             <RichText 
               content={item.content} 
               theme={theme}
               fontSize={fontSize}
               accentColor={accentColor}
             />
+          ) : (
+            <View style={{ gap: 4, width: '100%' }}>
+              {parseMessage(item.content).map((segment, idx) => {
+                if (segment.type === 'text') {
+                  return (
+                    <RichText 
+                      key={idx}
+                      content={segment.content} 
+                      theme={theme}
+                      fontSize={fontSize}
+                      accentColor={accentColor}
+                    />
+                  );
+                } else {
+                  return (
+                    <CollapsibleBlock
+                      key={idx}
+                      type={segment.type === 'thought' ? 'thought' : 'tool_call'}
+                      name={segment.name}
+                      input={segment.input}
+                      isClosed={segment.isClosed}
+                      themeColors={colors}
+                      themeSizes={sizes}
+                      accentHex={accentHex}
+                    >
+                      {segment.type === 'thought' ? (
+                        <RichText 
+                          content={segment.content} 
+                          theme={theme}
+                          fontSize={fontSize}
+                          accentColor={accentColor}
+                        />
+                      ) : (
+                        <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                          {segment.content || '(Executing...)'}
+                        </Text>
+                      )}
+                    </CollapsibleBlock>
+                  );
+                }
+              })}
+            </View>
           )}
 
           {showActionBar && (
