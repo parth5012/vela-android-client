@@ -55,8 +55,9 @@ export default function CollapsibleBlock({
     <View style={[
       styles.container, 
       { 
-        backgroundColor: themeColors.card, 
-        borderColor: isThought ? themeColors.border : accentHex + '33' 
+        backgroundColor: isThought ? 'rgba(255, 255, 255, 0.03)' : themeColors.card, 
+        borderColor: isThought ? themeColors.border : accentHex + '33',
+        borderStyle: isThought ? 'dashed' : 'solid',
       }
     ]}>
       {/* Header Pressable */}

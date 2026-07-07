@@ -323,103 +323,131 @@ export default function ChatScreen() {
     const isCompleted = item.content !== '' && (!isStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
     const showActionBar = isLastAssistantMessage && isCompleted;
 
+    const renderSegment = (segment: any, idx: number): React.ReactNode => {
+      if (segment.type === 'text') {
+        return (
+          <RichText 
+            key={idx}
+            content={segment.content || ''} 
+            theme={theme}
+            fontSize={fontSize}
+            accentColor={accentColor}
+          />
+        );
+      } else {
+        const hasChildren = segment.children && segment.children.length > 0;
+        return (
+          <CollapsibleBlock
+            key={idx}
+            type={segment.type === 'thought' ? 'thought' : 'tool_call'}
+            name={segment.name}
+            input={segment.input}
+            isClosed={segment.isClosed}
+            themeColors={colors}
+            themeSizes={sizes}
+            accentHex={accentHex}
+          >
+            {hasChildren ? (
+              <View style={{ gap: 4, width: '100%' }}>
+                {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
+              </View>
+            ) : segment.type === 'thought' ? (
+              null
+            ) : (
+              <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                {'(Executing...)'}
+              </Text>
+            )}
+          </CollapsibleBlock>
+        );
+      }
+    };
+
+    const segments = isUser ? [] : parseMessage(item.content);
+    const thoughts = segments.filter(s => s.type === 'thought');
+    const bubbleContent = segments.filter(s => s.type !== 'thought');
+
     return (
       <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
-        <View style={[
-          styles.bubble,
-          isUser ? styles.userBubble : styles.assistantBubble,
-          isUser 
-            ? { backgroundColor: colors.bubbleUser, borderColor: colors.bubbleUserBorder }
-            : { backgroundColor: accentHex + '0a', borderColor: accentHex + '26' }
-        ]}>
-          <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub }]}>
-            {isUser ? 'User' : 'Vela Agent'}
-          </Text>
-          {showRawMap[item.id] ? (
-            <ScrollView style={styles.rawScroll} nestedScrollEnabled={true}>
-              <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.text }]}>
-                {item.content}
-              </Text>
-            </ScrollView>
-          ) : item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
-            <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
-          ) : isUser ? (
-            <RichText 
-              content={item.content} 
-              theme={theme}
-              fontSize={fontSize}
-              accentColor={accentColor}
-            />
-          ) : (
-            <View style={{ gap: 4, width: '100%' }}>
-              {(() => {
-                const renderSegment = (segment: any, idx: number): React.ReactNode => {
-                  if (segment.type === 'text') {
-                    return (
-                      <RichText 
-                        key={idx}
-                        content={segment.content || ''} 
-                        theme={theme}
-                        fontSize={fontSize}
-                        accentColor={accentColor}
-                      />
-                    );
-                  } else {
-                    const hasChildren = segment.children && segment.children.length > 0;
-                    return (
-                      <CollapsibleBlock
-                        key={idx}
-                        type={segment.type === 'thought' ? 'thought' : 'tool_call'}
-                        name={segment.name}
-                        input={segment.input}
-                        isClosed={segment.isClosed}
-                        themeColors={colors}
-                        themeSizes={sizes}
-                        accentHex={accentHex}
-                      >
-                        {hasChildren ? (
-                          <View style={{ gap: 4, width: '100%' }}>
-                            {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
-                          </View>
-                        ) : segment.type === 'thought' ? (
-                          null
-                        ) : (
-                          <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                            {'(Executing...)'}
-                          </Text>
-                        )}
-                      </CollapsibleBlock>
-                    );
-                  }
-                };
-
-                return parseMessage(item.content).map((segment, idx) => renderSegment(segment, idx));
-              })()}
+        <View style={{ flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', width: '100%' }}>
+          
+          {/* Render thoughts uniquely above the main message bubble */}
+          {!isUser && thoughts.length > 0 && (
+            <View style={{ maxWidth: '85%', width: '100%', marginBottom: 6 }}>
+              {thoughts.map((segment, idx) => (
+                <CollapsibleBlock
+                  key={`thought-${idx}`}
+                  type="thought"
+                  isClosed={segment.isClosed}
+                  themeColors={colors}
+                  themeSizes={sizes}
+                  accentHex={accentHex}
+                >
+                  {segment.children && segment.children.length > 0 ? (
+                    <View style={{ gap: 4, width: '100%' }}>
+                      {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
+                    </View>
+                  ) : null}
+                </CollapsibleBlock>
+              ))}
             </View>
           )}
 
-          {showActionBar && (
-            <View style={styles.actionBar}>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-                onPress={() => handleCopyText(item.content)}
-              >
-                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Copy</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-                onPress={() => handleShareText(item.content)}
-              >
-                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Share</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-                onPress={() => setActiveMenuMessage(item)}
-              >
-                <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>︙</Text>
-              </Pressable>
-            </View>
-          )}
+          {/* Main Bubble */}
+          <View style={[
+            styles.bubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+            isUser 
+              ? { backgroundColor: colors.bubbleUser, borderColor: colors.bubbleUserBorder }
+              : { backgroundColor: accentHex + '0a', borderColor: accentHex + '26' }
+          ]}>
+            <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub }]}>
+              {isUser ? 'User' : 'Vela Agent'}
+            </Text>
+            {showRawMap[item.id] ? (
+              <ScrollView style={styles.rawScroll} nestedScrollEnabled={true}>
+                <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.text }]}>
+                  {item.content}
+                </Text>
+              </ScrollView>
+            ) : item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
+              <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
+            ) : isUser ? (
+              <RichText 
+                content={item.content} 
+                theme={theme}
+                fontSize={fontSize}
+                accentColor={accentColor}
+              />
+            ) : (
+              <View style={{ gap: 4, width: '100%' }}>
+                {bubbleContent.map((segment, idx) => renderSegment(segment, idx))}
+              </View>
+            )}
+
+            {showActionBar && (
+              <View style={styles.actionBar}>
+                <Pressable
+                  style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                  onPress={() => handleCopyText(item.content)}
+                >
+                  <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Copy</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                  onPress={() => handleShareText(item.content)}
+                >
+                  <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>Share</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                  onPress={() => setActiveMenuMessage(item)}
+                >
+                  <Text style={[styles.actionBtnText, { color: colors.textDark, fontSize: sizes.sub }]}>︙</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     );
