@@ -1,99 +1,94 @@
 export interface MessageSegment {
   type: 'text' | 'thought' | 'tool_call';
-  content: string;
+  content?: string;
   name?: string;
   input?: string;
   isClosed: boolean;
+  children?: MessageSegment[];
 }
 
 export function parseMessage(content: string): MessageSegment[] {
-  const segments: MessageSegment[] = [];
+  const root: MessageSegment = {
+    type: 'text',
+    isClosed: true,
+    children: [],
+  };
+
+  const stack: MessageSegment[] = [root];
   let index = 0;
 
-  while (index < content.length) {
-    const textRemaining = content.slice(index);
+  const activeNode = () => stack[stack.length - 1];
 
-    // Look for opening thought or call tag
-    const nextThought = textRemaining.indexOf('<thought>');
-    const nextCall = textRemaining.indexOf('<call:');
-
-    let firstTagIndex = -1;
-    let isThoughtTag = false;
-
-    if (nextThought !== -1 && nextCall !== -1) {
-      if (nextThought < nextCall) {
-        firstTagIndex = nextThought;
-        isThoughtTag = true;
-      } else {
-        firstTagIndex = nextCall;
-        isThoughtTag = false;
-      }
-    } else if (nextThought !== -1) {
-      firstTagIndex = nextThought;
-      isThoughtTag = true;
-    } else if (nextCall !== -1) {
-      firstTagIndex = nextCall;
-      isThoughtTag = false;
+  const addText = (text: string) => {
+    if (!text) return;
+    const current = activeNode();
+    if (!current.children) {
+      current.children = [];
     }
-
-    if (firstTagIndex === -1) {
-      // No more tags, append the rest as text
-      const text = textRemaining;
-      if (text) {
-        segments.push({
-          type: 'text',
-          content: text,
-          isClosed: true,
-        });
-      }
-      break;
-    }
-
-    // Add any preceding text as a segment
-    if (firstTagIndex > 0) {
-      const text = textRemaining.slice(0, firstTagIndex);
-      segments.push({
+    const lastChild = current.children[current.children.length - 1];
+    if (lastChild && lastChild.type === 'text') {
+      lastChild.content += text;
+    } else {
+      current.children.push({
         type: 'text',
         content: text,
         isClosed: true,
       });
     }
+  };
 
-    index += firstTagIndex;
+  while (index < content.length) {
+    const textRemaining = content.slice(index);
 
-    if (isThoughtTag) {
-      // Skip opening tag <thought>
+    const nextThoughtOpen = textRemaining.indexOf('<thought>');
+    const nextThoughtClose = textRemaining.indexOf('</thought>');
+    const nextCallOpen = textRemaining.indexOf('<call:');
+    const nextCallClose = textRemaining.indexOf('</call');
+
+    const targets: { pos: number; type: 'thought_open' | 'thought_close' | 'call_open' | 'call_close' }[] = [];
+    if (nextThoughtOpen !== -1) targets.push({ pos: nextThoughtOpen, type: 'thought_open' });
+    if (nextThoughtClose !== -1) targets.push({ pos: nextThoughtClose, type: 'thought_close' });
+    if (nextCallOpen !== -1) targets.push({ pos: nextCallOpen, type: 'call_open' });
+    if (nextCallClose !== -1) targets.push({ pos: nextCallClose, type: 'call_close' });
+
+    targets.sort((a, b) => a.pos - b.pos);
+
+    if (targets.length === 0) {
+      addText(textRemaining);
+      break;
+    }
+
+    const nextTarget = targets[0];
+
+    if (nextTarget.pos > 0) {
+      addText(textRemaining.slice(0, nextTarget.pos));
+    }
+
+    index += nextTarget.pos;
+
+    if (nextTarget.type === 'thought_open') {
       index += 9;
-      const thoughtRemaining = content.slice(index);
-      const closeIdx = thoughtRemaining.indexOf('</thought>');
-
-      if (closeIdx === -1) {
-        // Unclosed thought
-        segments.push({
-          type: 'thought',
-          content: thoughtRemaining,
-          isClosed: false,
-        });
-        break;
-      } else {
-        // Closed thought
-        segments.push({
-          type: 'thought',
-          content: thoughtRemaining.slice(0, closeIdx),
-          isClosed: true,
-        });
-        index += closeIdx + 10; // skip </thought>
+      const newNode: MessageSegment = {
+        type: 'thought',
+        isClosed: false,
+        children: [],
+      };
+      activeNode().children!.push(newNode);
+      stack.push(newNode);
+    } 
+    else if (nextTarget.type === 'thought_close') {
+      index += 10;
+      if (stack.length > 1 && stack[stack.length - 1].type === 'thought') {
+        const popped = stack.pop()!;
+        popped.isClosed = true;
       }
-    } else {
-      // Tool call tag. Format: <call:name input="...">
+    } 
+    else if (nextTarget.type === 'call_open') {
       const callRemaining = content.slice(index);
-      
-      // Match the full opening tag
       const openTagRegex = /^<call:([a-zA-Z0-9_:]+)(?:\s+input=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'))?\s*>/;
       const openTagMatch = callRemaining.match(openTagRegex);
 
       if (!openTagMatch) {
-        // Opening tag is incomplete/streaming
         const nameMatch = callRemaining.match(/^<call:([a-zA-Z0-9_:]*)/);
         const name = nameMatch && nameMatch[1] ? nameMatch[1] : 'Tool';
         
@@ -108,61 +103,49 @@ export function parseMessage(content: string): MessageSegment[] {
           }
         }
 
-        segments.push({
+        const newNode: MessageSegment = {
           type: 'tool_call',
           name,
           input,
-          content: '',
           isClosed: false,
-        });
+          children: [],
+        };
+        activeNode().children!.push(newNode);
+        stack.push(newNode);
         break;
       }
 
-      // Opening tag is complete
       const toolName = openTagMatch[1];
       const inputVal = openTagMatch[2] || openTagMatch[3] || '';
       const openTagLength = openTagMatch[0].length;
 
-      index += openTagLength; // Move past the opening tag
+      index += openTagLength;
 
-      // Now look for closing tag: </call:toolName> or </call>
-      const bodyRemaining = content.slice(index);
-      const closeTagIdx = bodyRemaining.indexOf('</call');
-
-      if (closeTagIdx === -1) {
-        // Unclosed tool call
-        segments.push({
-          type: 'tool_call',
-          name: toolName,
-          input: inputVal,
-          content: bodyRemaining,
-          isClosed: false,
-        });
-        break;
+      const newNode: MessageSegment = {
+        type: 'tool_call',
+        name: toolName,
+        input: inputVal,
+        isClosed: false,
+        children: [],
+      };
+      activeNode().children!.push(newNode);
+      stack.push(newNode);
+    } 
+    else if (nextTarget.type === 'call_close') {
+      const closeRemaining = content.slice(index);
+      const closeTagEndIdx = closeRemaining.indexOf('>');
+      
+      if (closeTagEndIdx === -1) {
+        index = content.length;
       } else {
-        // Find ending '>' of the closing tag
-        const closingTagRemaining = bodyRemaining.slice(closeTagIdx);
-        const closeTagEndIdx = closingTagRemaining.indexOf('>');
-        
-        const toolCallContent = bodyRemaining.slice(0, closeTagIdx);
-        
-        segments.push({
-          type: 'tool_call',
-          name: toolName,
-          input: inputVal,
-          content: toolCallContent,
-          isClosed: true,
-        });
-
-        if (closeTagEndIdx === -1) {
-          // Closing tag is truncated/incomplete, e.g. "</call"
-          break;
-        } else {
-          index += closeTagIdx + closeTagEndIdx + 1;
+        index += closeTagEndIdx + 1;
+        if (stack.length > 1 && stack[stack.length - 1].type === 'tool_call') {
+          const popped = stack.pop()!;
+          popped.isClosed = true;
         }
       }
     }
   }
 
-  return segments;
+  return root.children || [];
 }

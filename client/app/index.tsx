@@ -352,45 +352,49 @@ export default function ChatScreen() {
             />
           ) : (
             <View style={{ gap: 4, width: '100%' }}>
-              {parseMessage(item.content).map((segment, idx) => {
-                if (segment.type === 'text') {
-                  return (
-                    <RichText 
-                      key={idx}
-                      content={segment.content} 
-                      theme={theme}
-                      fontSize={fontSize}
-                      accentColor={accentColor}
-                    />
-                  );
-                } else {
-                  return (
-                    <CollapsibleBlock
-                      key={idx}
-                      type={segment.type === 'thought' ? 'thought' : 'tool_call'}
-                      name={segment.name}
-                      input={segment.input}
-                      isClosed={segment.isClosed}
-                      themeColors={colors}
-                      themeSizes={sizes}
-                      accentHex={accentHex}
-                    >
-                      {segment.type === 'thought' ? (
-                        <RichText 
-                          content={segment.content} 
-                          theme={theme}
-                          fontSize={fontSize}
-                          accentColor={accentColor}
-                        />
-                      ) : (
-                        <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                          {segment.content || '(Executing...)'}
-                        </Text>
-                      )}
-                    </CollapsibleBlock>
-                  );
-                }
-              })}
+              {(() => {
+                const renderSegment = (segment: any, idx: number): React.ReactNode => {
+                  if (segment.type === 'text') {
+                    return (
+                      <RichText 
+                        key={idx}
+                        content={segment.content || ''} 
+                        theme={theme}
+                        fontSize={fontSize}
+                        accentColor={accentColor}
+                      />
+                    );
+                  } else {
+                    const hasChildren = segment.children && segment.children.length > 0;
+                    return (
+                      <CollapsibleBlock
+                        key={idx}
+                        type={segment.type === 'thought' ? 'thought' : 'tool_call'}
+                        name={segment.name}
+                        input={segment.input}
+                        isClosed={segment.isClosed}
+                        themeColors={colors}
+                        themeSizes={sizes}
+                        accentHex={accentHex}
+                      >
+                        {hasChildren ? (
+                          <View style={{ gap: 4, width: '100%' }}>
+                            {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
+                          </View>
+                        ) : segment.type === 'thought' ? (
+                          null
+                        ) : (
+                          <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                            {'(Executing...)'}
+                          </Text>
+                        )}
+                      </CollapsibleBlock>
+                    );
+                  }
+                };
+
+                return parseMessage(item.content).map((segment, idx) => renderSegment(segment, idx));
+              })()}
             </View>
           )}
 

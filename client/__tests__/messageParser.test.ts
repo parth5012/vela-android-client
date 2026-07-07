@@ -13,7 +13,13 @@ describe('messageParser', () => {
     const text = '<thought>Thinking about rendering...</thought>Ready to display.';
     const result = parseMessage(text);
     expect(result).toEqual([
-      { type: 'thought', content: 'Thinking about rendering...', isClosed: true },
+      {
+        type: 'thought',
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'Thinking about rendering...', isClosed: true }
+        ]
+      },
       { type: 'text', content: 'Ready to display.', isClosed: true }
     ]);
   });
@@ -22,7 +28,13 @@ describe('messageParser', () => {
     const text = '<thought>Currently thinking about the next step';
     const result = parseMessage(text);
     expect(result).toEqual([
-      { type: 'thought', content: 'Currently thinking about the next step', isClosed: false }
+      {
+        type: 'thought',
+        isClosed: false,
+        children: [
+          { type: 'text', content: 'Currently thinking about the next step', isClosed: true }
+        ]
+      }
     ]);
   });
 
@@ -35,8 +47,10 @@ describe('messageParser', () => {
         type: 'tool_call',
         name: 'default_api:run_command',
         input: '{\\"CommandLine\\":\\"ls -la\\"}',
-        content: 'file1.txt\nfile2.txt',
-        isClosed: true
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'file1.txt\nfile2.txt', isClosed: true }
+        ]
       },
       { type: 'text', content: '\nExecution done.', isClosed: true }
     ]);
@@ -50,8 +64,10 @@ describe('messageParser', () => {
         type: 'tool_call',
         name: 'default_api:view_file',
         input: '{"AbsolutePath":"/test.txt"}',
-        content: 'hello',
-        isClosed: true
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'hello', isClosed: true }
+        ]
       }
     ]);
   });
@@ -64,8 +80,8 @@ describe('messageParser', () => {
         type: 'tool_call',
         name: 'default_api:run_command',
         input: '{\\"Command',
-        content: '',
-        isClosed: false
+        isClosed: false,
+        children: []
       }
     ]);
   });
@@ -78,8 +94,10 @@ describe('messageParser', () => {
         type: 'tool_call',
         name: 'default_api:run_command',
         input: '{\\"CommandLine\\":\\"pwd\\"}',
-        content: '/users/test/workspace',
-        isClosed: false
+        isClosed: false,
+        children: [
+          { type: 'text', content: '/users/test/workspace', isClosed: true }
+        ]
       }
     ]);
   });
@@ -89,17 +107,31 @@ describe('messageParser', () => {
     const result = parseMessage(text);
     expect(result).toEqual([
       { type: 'text', content: 'Starting...\n', isClosed: true },
-      { type: 'thought', content: 'Thinking 1', isClosed: true },
+      {
+        type: 'thought',
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'Thinking 1', isClosed: true }
+        ]
+      },
       { type: 'text', content: 'Mid text\n', isClosed: true },
       {
         type: 'tool_call',
         name: 'toolA',
         input: 'argsA',
-        content: 'outputA',
-        isClosed: true
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'outputA', isClosed: true }
+        ]
       },
       { type: 'text', content: '\n', isClosed: true },
-      { type: 'thought', content: 'Thinking 2', isClosed: false }
+      {
+        type: 'thought',
+        isClosed: false,
+        children: [
+          { type: 'text', content: 'Thinking 2', isClosed: true }
+        ]
+      }
     ]);
   });
 
@@ -111,8 +143,35 @@ describe('messageParser', () => {
         type: 'tool_call',
         name: 'default_api:run_command',
         input: '{\\"CommandLine\\":\\"echo 1 > out.txt\\"}',
-        content: 'Success',
-        isClosed: true
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'Success', isClosed: true }
+        ]
+      }
+    ]);
+  });
+
+  it('should parse nested tool calls hierarchically', () => {
+    const text = '<call:web_search input="query_1"><call:tavily_search input="query_2">tavily_output</call:tavily_search>web_output</call:web_search>';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'tool_call',
+        name: 'web_search',
+        input: 'query_1',
+        isClosed: true,
+        children: [
+          {
+            type: 'tool_call',
+            name: 'tavily_search',
+            input: 'query_2',
+            isClosed: true,
+            children: [
+              { type: 'text', content: 'tavily_output', isClosed: true }
+            ]
+          },
+          { type: 'text', content: 'web_output', isClosed: true }
+        ]
       }
     ]);
   });
