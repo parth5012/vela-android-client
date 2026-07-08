@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import MessageOptionsModal from '../components/ui/MessageOptionsModal';
 import { useConfigStore } from '../store/useConfigStore';
@@ -802,8 +802,9 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   welcomeContent: {
-    alignItems: 'center',
+    width: '90%',
     maxWidth: 400,
+    alignItems: 'center',
   },
   welcomeLogo: {
     fontSize: 32,
@@ -823,7 +824,7 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   welcomeButton: {
     backgroundColor: '#6366f1',
@@ -962,20 +963,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
-  welcomeContent: {
-    width: '90%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
   welcomeGreeting: {
     fontWeight: 'bold',
     marginTop: 24,
     marginBottom: 4,
     textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    textAlign: 'center',
-    marginBottom: 16,
   },
   quoteContainer: {
     borderRadius: 12,
