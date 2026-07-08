@@ -175,4 +175,115 @@ describe('messageParser', () => {
       }
     ]);
   });
+
+  it('should parse closed intent block', () => {
+    const text = '<intent>Goal is to list files.</intent>Ready.';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'intent',
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'Goal is to list files.', isClosed: true }
+        ]
+      },
+      { type: 'text', content: 'Ready.', isClosed: true }
+    ]);
+  });
+
+  it('should parse incomplete/streaming intent block', () => {
+    const text = '<intent>Currently parsing intent';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'intent',
+        isClosed: false,
+        children: [
+          { type: 'text', content: 'Currently parsing intent', isClosed: true }
+        ]
+      }
+    ]);
+  });
+
+  it('should parse skill block with input', () => {
+    const text = '<skill:custom_search input="{\\"query\\":\\"react\\"}">results</skill:custom_search>';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'skill',
+        name: 'custom_search',
+        input: '{\\"query\\":\\"react\\"}',
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'results', isClosed: true }
+        ]
+      }
+    ]);
+  });
+
+  it('should parse incomplete/streaming skill block', () => {
+    const text = '<skill:custom_search input="{\\"query\\":\\"react\\"}">fetching';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'skill',
+        name: 'custom_search',
+        input: '{\\"query\\":\\"react\\"}',
+        isClosed: false,
+        children: [
+          { type: 'text', content: 'fetching', isClosed: true }
+        ]
+      }
+    ]);
+  });
+
+  it('should parse closed skill block without input', () => {
+    const text = '<skill:custom_search>results</skill:custom_search>';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      {
+        type: 'skill',
+        name: 'custom_search',
+        isClosed: true,
+        children: [
+          { type: 'text', content: 'results', isClosed: true }
+        ]
+      }
+    ]);
+  });
+
+  it('should handle complex mixed streams containing thoughts, intents, skills, and tool calls', () => {
+    const text = 'Starting...\n<intent>Identify user need</intent>\n<thought>Thinking...</thought>\n<skill:search input="query">search_out</skill:search>\n<call:execute>done</call:execute>';
+    const result = parseMessage(text);
+    expect(result).toEqual([
+      { type: 'text', content: 'Starting...\n', isClosed: true },
+      {
+        type: 'intent',
+        isClosed: true,
+        children: [{ type: 'text', content: 'Identify user need', isClosed: true }]
+      },
+      { type: 'text', content: '\n', isClosed: true },
+      {
+        type: 'thought',
+        isClosed: true,
+        children: [{ type: 'text', content: 'Thinking...', isClosed: true }]
+      },
+      { type: 'text', content: '\n', isClosed: true },
+      {
+        type: 'skill',
+        name: 'search',
+        input: 'query',
+        isClosed: true,
+        children: [{ type: 'text', content: 'search_out', isClosed: true }]
+      },
+      { type: 'text', content: '\n', isClosed: true },
+      {
+        type: 'tool_call',
+        name: 'execute',
+        isClosed: true,
+        children: [{ type: 'text', content: 'done', isClosed: true }]
+      }
+    ]);
+  });
 });
+
