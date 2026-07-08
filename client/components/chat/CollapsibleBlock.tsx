@@ -7,7 +7,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 interface CollapsibleBlockProps {
-  type: 'thought' | 'tool_call';
+  type: 'thought' | 'tool_call' | 'intent' | 'skill';
   name?: string;
   input?: string;
   isClosed: boolean;
@@ -46,17 +46,31 @@ export default function CollapsibleBlock({
   };
 
   const isThought = type === 'thought';
-  const icon = isThought ? '🧠' : '⚙️';
-  const title = isThought 
-    ? 'Thought Process' 
-    : `Executed: ${name || 'Tool'}`;
+  const isIntent = type === 'intent';
+  const isSkill = type === 'skill';
+
+  let icon = '⚙️';
+  let title = 'Executed: ' + (name || 'Tool');
+
+  if (isThought) {
+    icon = '🧠';
+    title = 'Thought Process';
+  } else if (isIntent) {
+    icon = '🎯';
+    title = 'Intent';
+  } else if (isSkill) {
+    icon = '🧩';
+    title = 'Executed Skill: ' + (name || 'Skill');
+  }
+
+  const isThoughtOrIntent = isThought || isIntent;
 
   return (
     <View style={[
       styles.container, 
       { 
-        backgroundColor: isThought ? 'rgba(255, 255, 255, 0.03)' : themeColors.card, 
-        borderColor: isThought ? themeColors.border : accentHex + '33',
+        backgroundColor: isThoughtOrIntent ? 'rgba(255, 255, 255, 0.03)' : themeColors.card, 
+        borderColor: isThoughtOrIntent ? themeColors.border : accentHex + '33',
         borderStyle: 'solid',
       }
     ]}>
@@ -95,7 +109,7 @@ export default function CollapsibleBlock({
           styles.content, 
           { 
             borderTopColor: themeColors.border,
-            backgroundColor: isThought ? 'transparent' : 'rgba(0, 0, 0, 0.15)'
+            backgroundColor: isThoughtOrIntent ? 'transparent' : 'rgba(0, 0, 0, 0.15)'
           }
         ]}>
           {children}
