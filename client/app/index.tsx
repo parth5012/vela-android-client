@@ -336,10 +336,11 @@ export default function ChatScreen() {
         );
       } else {
         const hasChildren = segment.children && segment.children.length > 0;
+        const isThoughtOrIntent = segment.type === 'thought' || segment.type === 'intent';
         return (
           <CollapsibleBlock
             key={idx}
-            type={segment.type === 'thought' ? 'thought' : 'tool_call'}
+            type={segment.type}
             name={segment.name}
             input={segment.input}
             isClosed={segment.isClosed}
@@ -351,11 +352,11 @@ export default function ChatScreen() {
               <View style={{ gap: 4, width: '100%' }}>
                 {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
               </View>
-            ) : segment.type === 'thought' ? (
+            ) : isThoughtOrIntent ? (
               null
             ) : (
               <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                {'(Executing...)'}
+                {segment.type === 'skill' ? '(Executing skill...)' : '(Executing...)'}
               </Text>
             )}
           </CollapsibleBlock>
@@ -364,20 +365,21 @@ export default function ChatScreen() {
     };
 
     const segments = isUser ? [] : parseMessage(item.content);
-    const thoughts = segments.filter(s => s.type === 'thought');
-    const bubbleContent = segments.filter(s => s.type !== 'thought');
+    const headerSegments = segments.filter(s => s.type === 'thought' || s.type === 'intent');
+    const bubbleContent = segments.filter(s => s.type !== 'thought' && s.type !== 'intent');
 
     return (
       <View style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}>
         <View style={{ flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', width: '100%' }}>
           
           {/* Render thoughts uniquely above the main message bubble */}
-          {!isUser && thoughts.length > 0 && (
+          {/* Render thought and intent blocks uniquely above the main message bubble */}
+          {!isUser && headerSegments.length > 0 && (
             <View style={{ maxWidth: '85%', width: '100%', marginBottom: 6 }}>
-              {thoughts.map((segment, idx) => (
+              {headerSegments.map((segment, idx) => (
                 <CollapsibleBlock
-                  key={`thought-${idx}`}
-                  type="thought"
+                  key={`${segment.type}-${idx}`}
+                  type={segment.type as 'thought' | 'intent'}
                   isClosed={segment.isClosed}
                   themeColors={colors}
                   themeSizes={sizes}
