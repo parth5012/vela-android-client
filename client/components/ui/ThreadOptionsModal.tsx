@@ -11,6 +11,8 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Thread, useChatStore } from '../../store/useChatStore';
 
 interface ThreadOptionsModalProps {
@@ -24,7 +26,7 @@ export default function ThreadOptionsModal({
   thread,
   onClose,
 }: ThreadOptionsModalProps) {
-  const { togglePinThread, renameThread, deleteThread } = useChatStore();
+  const { togglePinThread, renameThread, deleteThread, messages } = useChatStore();
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [cachedThread, setCachedThread] = useState<Thread | null>(null);
@@ -60,6 +62,82 @@ export default function ThreadOptionsModal({
       });
     } catch (error) {
       console.error('Error sharing thread:', error);
+    }
+    onClose();
+  };
+
+  const handleExportMarkdown = async () => {
+    try {
+      const threadMsgs = messages[activeThread.id] || [];
+      if (threadMsgs.length === 0) {
+        Alert.alert('Info', 'This conversation has no messages to export.');
+        return;
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const cleanTitle = activeThread.title
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase()
+        .slice(0, 30);
+      const filename = `vela-chat-${cleanTitle || 'export'}-${dateStr}.md`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+      let mdContent = `# Vela Chat: ${activeThread.title}\n`;
+      mdContent += `*Exported on: ${new Date().toLocaleString()}*\n`;
+      mdContent += `*Persona: ${activeThread.persona || 'personal assistant'}*\n`;
+      mdContent += `*ID: ${activeThread.id}*\n\n`;
+      mdContent += `---\n\n`;
+
+      threadMsgs.forEach((msg) => {
+        const isUser = msg.role === 'user';
+        mdContent += `### ${isUser ? '👤 User' : '🤖 Vela Agent'}\n\n`;
+        mdContent += `${msg.content}\n\n`;
+        mdContent += `---\n\n`;
+      });
+
+      await FileSystem.writeAsStringAsync(fileUri, mdContent, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: 'text/markdown', dialogTitle: 'Export Chat' });
+    } catch (err: any) {
+      console.error('Error exporting markdown:', err);
+      Alert.alert('Error', 'Failed to export chat.');
+    }
+    onClose();
+  };
+
+  const handleExportJson = async () => {
+    try {
+      const threadMsgs = messages[activeThread.id] || [];
+      if (threadMsgs.length === 0) {
+        Alert.alert('Info', 'This conversation has no messages to export.');
+        return;
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const cleanTitle = activeThread.title
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase()
+        .slice(0, 30);
+      const filename = `vela-chat-${cleanTitle || 'export'}-${dateStr}.json`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+      const exportData = {
+        thread: {
+          id: activeThread.id,
+          title: activeThread.title,
+          persona: activeThread.persona,
+          updated_at: activeThread.updated_at,
+        },
+        messages: threadMsgs,
+        exported_at: new Date().toISOString(),
+      };
+
+      const jsonContent = JSON.stringify(exportData, null, 2);
+
+      await FileSystem.writeAsStringAsync(fileUri, jsonContent, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Export Chat as JSON' });
+    } catch (err: any) {
+      console.error('Error exporting JSON:', err);
+      Alert.alert('Error', 'Failed to export chat.');
     }
     onClose();
   };
@@ -130,6 +208,28 @@ export default function ThreadOptionsModal({
                 >
                   <Text style={styles.optionIcon}>📤</Text>
                   <Text style={styles.optionButtonText}>Share Conversation</Text>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.optionButton,
+                    pressed && styles.optionButtonPressed,
+                  ]}
+                  onPress={handleExportMarkdown}
+                >
+                  <Text style={styles.optionIcon}>📄</Text>
+                  <Text style={styles.optionButtonText}>Export as Markdown (.md)</Text>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.optionButton,
+                    pressed && styles.optionButtonPressed,
+                  ]}
+                  onPress={handleExportJson}
+                >
+                  <Text style={styles.optionIcon}>⚙️</Text>
+                  <Text style={styles.optionButtonText}>Export as JSON (.json)</Text>
                 </Pressable>
 
                 <Pressable

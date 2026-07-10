@@ -319,9 +319,8 @@ export default function ChatScreen() {
 
   const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
-    const isLastAssistantMessage = item.role === 'assistant' && activeMessages.filter(m => m.role === 'assistant').pop()?.id === item.id;
     const isCompleted = item.content !== '' && (!isStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
-    const showActionBar = isLastAssistantMessage && isCompleted;
+    const showActionBar = item.role === 'assistant' && isCompleted;
 
     const renderSegment = (segment: any, idx: number): React.ReactNode => {
       if (segment.type === 'text') {
