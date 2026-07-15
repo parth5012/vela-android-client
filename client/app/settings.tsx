@@ -40,7 +40,13 @@ export default function SettingsScreen() {
     setDefaultPersona,
     userName,
     setUserName,
+    suggestionStarters,
+    setSuggestionStarters,
   } = useConfigStore();
+
+  const [newStarterLabel, setNewStarterLabel] = useState('');
+  const [newStarterText, setNewStarterText] = useState('');
+  const [newStarterPersona, setNewStarterPersona] = useState('personal assistant');
   const { clearStore } = useChatStore();
   const router = useRouter();
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
@@ -250,7 +256,7 @@ export default function SettingsScreen() {
           <View style={styles.controlGroup}>
             <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>App Theme</Text>
             <View style={styles.row}>
-              {(['deep', 'slate', 'cyberpunk'] as const).map((t) => {
+              {(['deep', 'slate', 'cyberpunk', 'nordic', 'dracula', 'oled'] as const).map((t) => {
                 const isSelected = theme === t;
                 return (
                   <Pressable
@@ -492,6 +498,87 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
+
+          {/* Suggestion Starters Manager */}
+          <View style={[styles.controlGroup, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 20, marginTop: 20 }]}>
+            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Suggestion Starters</Text>
+            
+            <View style={{ gap: 8, marginTop: 8 }}>
+              {suggestionStarters.map((starter, sIdx) => (
+                <View key={sIdx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.background, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ color: colors.text, fontSize: sizes.text - 1, fontWeight: 'bold' }}>{starter.label}</Text>
+                    <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: sizes.sub }}>{starter.text}</Text>
+                  </View>
+                  <Pressable 
+                    onPress={() => {
+                      const updated = suggestionStarters.filter((_, idx) => idx !== sIdx);
+                      setSuggestionStarters(updated);
+                    }}
+                    style={{ padding: 4 }}
+                  >
+                    <Text style={{ color: '#ef4444', fontSize: sizes.sub, fontWeight: 'bold' }}>Delete</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+            
+            <View style={{ marginTop: 12, padding: 10, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.02)' }}>
+              <Text style={{ color: colors.text, fontSize: sizes.text - 1, fontWeight: 'bold', marginBottom: 8 }}>Add New Suggestion</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text - 1, marginBottom: 8, height: 36, paddingVertical: 6 }]}
+                placeholder="Label (e.g. 📊 Data Analyst)"
+                placeholderTextColor={colors.textDark}
+                value={newStarterLabel}
+                onChangeText={setNewStarterLabel}
+              />
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text - 1, marginBottom: 8, height: 36, paddingVertical: 6 }]}
+                placeholder="Prompt text"
+                placeholderTextColor={colors.textDark}
+                value={newStarterText}
+                onChangeText={setNewStarterText}
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {[
+                  { id: 'personal assistant', name: 'Assistant' },
+                  { id: 'teacher', name: 'Teacher' },
+                  { id: 'analyst', name: 'Analyst' },
+                  { id: 'prompt builder', name: 'Builder' },
+                ].map(p => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setNewStarterPersona(p.id)}
+                    style={{
+                      paddingVertical: 4,
+                      paddingHorizontal: 8,
+                      borderRadius: 4,
+                      borderWidth: 1,
+                      borderColor: newStarterPersona === p.id ? accentHex : colors.border,
+                      backgroundColor: newStarterPersona === p.id ? accentHex + '20' : colors.background
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontSize: sizes.sub }}>{p.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!newStarterLabel.trim() || !newStarterText.trim()) {
+                    Alert.alert('Error', 'Please fill in both the label and prompt text.');
+                    return;
+                  }
+                  const updated = [...suggestionStarters, { label: newStarterLabel.trim(), text: newStarterText.trim(), persona: newStarterPersona }];
+                  setSuggestionStarters(updated);
+                  setNewStarterLabel('');
+                  setNewStarterText('');
+                }}
+                style={{ backgroundColor: accentHex, padding: 8, borderRadius: 6, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#ffffff', fontSize: sizes.sub, fontWeight: 'bold' }}>Add Suggestion</Text>
+              </Pressable>
+            </View>
+          </View>
 
       {/* Danger Zone Section */}
       <View style={[styles.section, styles.dangerSection, { borderTopColor: colors.border }]}>
