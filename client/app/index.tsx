@@ -61,7 +61,7 @@ const generateId = (prefix: string) => {
 };
 
 export default function ChatScreen() {
-  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona, userName } = useConfigStore();
+  const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona, userName, suggestionStarters } = useConfigStore();
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
@@ -317,10 +317,52 @@ export default function ChatScreen() {
     }));
   }, []);
 
+  const renderSkillJson = useCallback((children: any[], name?: string) => {
+    const rawContent = children.map(c => c.content || '').join('');
+    let formattedJson = rawContent;
+    try {
+      const parsed = JSON.parse(rawContent.trim());
+      formattedJson = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      // Keep raw
+    }
+
+    return (
+      <View style={[styles.skillPanel, { borderColor: accentHex + '40', backgroundColor: accentHex + '08' }]}>
+        <View style={[styles.skillHeader, { borderBottomColor: accentHex + '20', backgroundColor: accentHex + '10' }]}>
+          <View style={styles.skillBadge}>
+            <Text style={{ fontSize: sizes.text - 2, marginRight: 4 }}>🧩</Text>
+            <Text style={[styles.skillBadgeText, { color: accentHex, fontSize: sizes.sub - 1, fontWeight: 'bold' }]}>
+              SKILL: {(name || 'Skill').toUpperCase()}
+            </Text>
+          </View>
+          <Pressable 
+            style={({ pressed }) => [styles.skillCopyBtn, pressed && { opacity: 0.7 }]} 
+            onPress={async () => {
+              await Clipboard.setStringAsync(rawContent);
+              Alert.alert('Copied', 'Skill output JSON copied to clipboard.');
+            }}
+          >
+            <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 2, fontWeight: 'bold' }}>Copy Output</Text>
+          </Pressable>
+        </View>
+        <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <Text style={[styles.skillBodyText, { color: colors.text, fontSize: sizes.sub, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+            {formattedJson}
+          </Text>
+        </ScrollView>
+      </View>
+    );
+  }, [colors, sizes, accentHex]);
+
   const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
     const isCompleted = item.content !== '' && (!isStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
     const showActionBar = item.role === 'assistant' && isCompleted;
+
+    const activeThread = threads.find((t) => t.id === activeThreadId);
+    const threadPersonaId = activeThread?.persona || 'personal assistant';
+    const currentPersona = personas.find(p => p.id === threadPersonaId);
 
     const renderSegment = (segment: any, idx: number): React.ReactNode => {
       if (segment.type === 'text') {
@@ -347,7 +389,9 @@ export default function ChatScreen() {
             themeSizes={sizes}
             accentHex={accentHex}
           >
-            {hasChildren ? (
+            {segment.type === 'skill' ? (
+              renderSkillJson(segment.children || [], segment.name)
+            ) : hasChildren ? (
               <View style={{ gap: 4, width: '100%' }}>
                 {segment.children.map((child: any, childIdx: number) => renderSegment(child, childIdx))}
               </View>
@@ -402,9 +446,15 @@ export default function ChatScreen() {
               ? { backgroundColor: colors.bubbleUser, borderColor: colors.bubbleUserBorder }
               : { backgroundColor: accentHex + '0a', borderColor: accentHex + '26' }
           ]}>
-            <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub }]}>
-              {isUser ? 'User' : 'Vela Agent'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ fontSize: sizes.sub + 2, marginRight: 6 }}>
+                {isUser ? '👤' : (currentPersona?.icon || '🤖')}
+              </Text>
+              <Text style={[styles.senderLabel, { color: colors.textDark, fontSize: sizes.sub, marginBottom: 0 }]}>
+                {isUser ? 'User' : `Vela Agent (${currentPersona?.name || 'Personal Assistant'})`}
+              </Text>
+            </View>
+
             {showRawMap[item.id] ? (
               <ScrollView style={styles.rawScroll} nestedScrollEnabled={true}>
                 <Text style={[styles.rawText, { color: colors.text, fontSize: sizes.text }]}>
@@ -422,7 +472,28 @@ export default function ChatScreen() {
               />
             ) : (
               <View style={{ gap: 4, width: '100%' }}>
-                {bubbleContent.map((segment, idx) => renderSegment(segment, idx))}
+                {bubbleContent.map((segment, idx) => {
+                  const node = renderSegment(segment, idx);
+                  const isLast = idx === bubbleContent.length - 1;
+                  if (segment.type === 'skill' && !isLast) {
+                    return (
+                      <View key={idx} style={{ width: '100%' }}>
+                        {node}
+                        <View style={{ height: sizes.text }} />
+                      </View>
+                    );
+                  }
+                  return node;
+                })}
+              </View>
+            )}
+
+            {!isUser && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 4 }}>
+                <View style={[styles.typingDot, { backgroundColor: accentHex }]} />
+                <View style={[styles.typingDot, { backgroundColor: accentHex, opacity: 0.6 }]} />
+                <View style={[styles.typingDot, { backgroundColor: accentHex, opacity: 0.3 }]} />
+                <Text style={{ color: colors.textDark, fontSize: sizes.sub - 1, marginLeft: 4, fontWeight: 'bold' }}>VELA IS COMPILING...</Text>
               </View>
             )}
 
@@ -465,6 +536,9 @@ export default function ChatScreen() {
     handleCopyText,
     handleShareText,
     setActiveMenuMessage,
+    threads,
+    personas,
+    renderSkillJson,
   ]);
 
 
@@ -598,8 +672,8 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       {activeThreadId ? (
@@ -646,6 +720,7 @@ export default function ChatScreen() {
           </Animated.View>
 
           <FlatList
+            style={styles.flatList}
             data={reversedMessages}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
@@ -689,11 +764,7 @@ export default function ChatScreen() {
             {/* Suggestion Starter Cards */}
             <Text style={[styles.sectionTitleLabel, { color: colors.text, fontSize: sizes.text }]}>Suggestions</Text>
             <View style={styles.suggestionsContainer}>
-              {[
-                { label: '👩‍🏫 Teach Concept', text: 'Teach me the intuition behind binary search and trace an example', persona: 'teacher' },
-                { label: '📊 Data Analyst', text: 'Analyze the key features of the 2026 FIFA World Cup matches', persona: 'analyst' },
-                { label: '✍️ Prompt Architect', text: 'Help me draft a detailed system prompt for a weather assistant bot', persona: 'prompt builder' }
-              ].map((item, idx) => (
+              {suggestionStarters.map((item, idx) => (
                 <Pressable
                   key={idx}
                   style={({ pressed }) => [
@@ -788,6 +859,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#09090b',
+  },
+  flatList: {
+    flex: 1,
   },
   listContent: {
     padding: 16,
@@ -956,6 +1030,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   welcomeScrollView: {
+    flex: 1,
     width: '100%',
   },
   welcomeScrollContent: {
@@ -1039,6 +1114,43 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 40,
+  },
+  skillPanel: {
+    borderWidth: 1,
+    borderRadius: 10,
+    marginVertical: 4,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+  },
+  skillHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+  },
+  skillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  skillBadgeText: {
+    letterSpacing: 0.5,
+  },
+  skillCopyBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  skillBodyText: {
+    padding: 12,
+    lineHeight: 16,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 });
 
