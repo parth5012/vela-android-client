@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Text, Pressable, ScrollView } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Markdown from 'react-native-markdown-display';
 import { parseContent } from '../../utils/latexExtractor';
 import LatexRenderer from './LatexRenderer';
@@ -7,9 +8,9 @@ import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../../utils/theme';
 
 interface RichTextProps {
   content: string;
-  theme?: 'deep' | 'slate' | 'cyberpunk';
+  theme?: 'deep' | 'slate' | 'cyberpunk' | 'nordic' | 'dracula' | 'oled';
   fontSize?: 'small' | 'medium' | 'large';
-  accentColor?: 'indigo' | 'emerald' | 'rose' | 'amber';
+  accentColor?: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet' | 'pink' | 'orange' | 'blue';
 }
 
 export default function RichText({
@@ -22,6 +23,58 @@ export default function RichText({
   const colors = THEME_COLORS[theme] || THEME_COLORS.deep;
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
+
+  const rules = {
+    fence: (node: any) => {
+      const codeText = node.content || '';
+      const lang = node.info || '';
+      return (
+        <View key={node.key} style={[styles.codeBlockWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.codeBlockHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.codeBlockLang, { color: colors.textDark }]}>
+              {lang.toUpperCase() || 'CODE'}
+            </Text>
+            <Pressable 
+              style={({ pressed }) => [styles.codeCopyBtn, pressed && { opacity: 0.7 }]} 
+              onPress={async () => {
+                await Clipboard.setStringAsync(codeText);
+              }}
+            >
+              <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 1, fontWeight: 'bold' }}>Copy</Text>
+            </Pressable>
+          </View>
+          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+            <Text style={[styles.codeText, { color: colors.text, fontSize: sizes.text - 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+              {codeText.replace(/\n$/, '')}
+            </Text>
+          </ScrollView>
+        </View>
+      );
+    },
+    code_block: (node: any) => {
+      const codeText = node.content || '';
+      return (
+        <View key={node.key} style={[styles.codeBlockWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.codeBlockHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.codeBlockLang, { color: colors.textDark }]}>CODE</Text>
+            <Pressable 
+              style={({ pressed }) => [styles.codeCopyBtn, pressed && { opacity: 0.7 }]} 
+              onPress={async () => {
+                await Clipboard.setStringAsync(codeText);
+              }}
+            >
+              <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 1, fontWeight: 'bold' }}>Copy</Text>
+            </Pressable>
+          </View>
+          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+            <Text style={[styles.codeText, { color: colors.text, fontSize: sizes.text - 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+              {codeText.replace(/\n$/, '')}
+            </Text>
+          </ScrollView>
+        </View>
+      );
+    }
+  };
 
   const dynamicMarkdownStyles = {
     body: {
@@ -117,7 +170,7 @@ export default function RichText({
     <View style={styles.container}>
       {segments.map((segment, index) => {
         if (segment.type === 'markdown') {
-          return <Markdown key={index} style={dynamicMarkdownStyles}>{segment.content}</Markdown>;
+          return <Markdown key={index} rules={rules} style={dynamicMarkdownStyles}>{segment.content}</Markdown>;
         } else if (segment.type === 'latex-inline') {
           return (
             <LatexRenderer
@@ -144,6 +197,36 @@ export default function RichText({
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'stretch',
+  },
+  codeBlockWrapper: {
+    borderWidth: 1,
+    borderRadius: 8,
+    marginVertical: 8,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+  },
+  codeBlockHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+  },
+  codeBlockLang: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  codeCopyBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  codeText: {
+    padding: 12,
+    lineHeight: 18,
   },
 });
 
