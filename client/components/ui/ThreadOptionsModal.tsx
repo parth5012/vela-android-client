@@ -187,7 +187,7 @@ export default function ThreadOptionsModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={styles.keyboardAvoid}
         >
           <Pressable style={styles.modalContent} onPress={() => {}}>
