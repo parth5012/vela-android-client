@@ -4,6 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+export interface SuggestionStarter {
+  label: string;
+  text: string;
+  persona: string;
+}
+
 interface ConfigState {
   apiUrl: string;
   apiKey: string;
@@ -12,22 +18,24 @@ interface ConfigState {
   setConfig: (url: string, key: string) => void;
   clearConfig: () => void;
   setHasHydrated: (val: boolean) => void;
-  theme: 'deep' | 'slate' | 'cyberpunk';
+  theme: 'deep' | 'slate' | 'cyberpunk' | 'nordic' | 'dracula' | 'oled';
   fontSize: 'small' | 'medium' | 'large';
-  accentColor: 'indigo' | 'emerald' | 'rose' | 'amber';
+  accentColor: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet' | 'pink' | 'orange' | 'blue';
   systemPrompt: string;
   temperature: number;
   modelName: string;
   defaultPersona: string;
   userName: string;
-  setTheme: (theme: 'deep' | 'slate' | 'cyberpunk') => void;
+  suggestionStarters: SuggestionStarter[];
+  setTheme: (theme: 'deep' | 'slate' | 'cyberpunk' | 'nordic' | 'dracula' | 'oled') => void;
   setFontSize: (size: 'small' | 'medium' | 'large') => void;
-  setAccentColor: (color: 'indigo' | 'emerald' | 'rose' | 'amber') => void;
+  setAccentColor: (color: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet' | 'pink' | 'orange' | 'blue') => void;
   setSystemPrompt: (prompt: string) => void;
   setTemperature: (temp: number) => void;
   setModelName: (model: string) => void;
   setDefaultPersona: (persona: string) => void;
   setUserName: (name: string) => void;
+  setSuggestionStarters: (starters: SuggestionStarter[]) => void;
 }
 
 const SECURE_KEY = 'vela-api-key';
@@ -97,6 +105,11 @@ export const useConfigStore = create<ConfigState>()(
       modelName: 'gemini-1.5-pro',
       defaultPersona: 'personal assistant',
       userName: 'Parth',
+      suggestionStarters: [
+        { label: '👩‍🏫 Teach Concept', text: 'Teach me the intuition behind binary search and trace an example', persona: 'teacher' },
+        { label: '📊 Data Analyst', text: 'Analyze the key features of the 2026 FIFA World Cup matches', persona: 'analyst' },
+        { label: '✍️ Prompt Architect', text: 'Help me draft a detailed system prompt for a weather assistant bot', persona: 'prompt builder' }
+      ],
       setConfig: (url, key) => set({ apiUrl: url, apiKey: key, isConfigured: true }),
       clearConfig: () =>
         set({
@@ -111,6 +124,11 @@ export const useConfigStore = create<ConfigState>()(
           modelName: 'gemini-1.5-pro',
           defaultPersona: 'personal assistant',
           userName: 'Parth',
+          suggestionStarters: [
+            { label: '👩‍🏫 Teach Concept', text: 'Teach me the intuition behind binary search and trace an example', persona: 'teacher' },
+            { label: '📊 Data Analyst', text: 'Analyze the key features of the 2026 FIFA World Cup matches', persona: 'analyst' },
+            { label: '✍️ Prompt Architect', text: 'Help me draft a detailed system prompt for a weather assistant bot', persona: 'prompt builder' }
+          ],
         }),
       setHasHydrated: (val) => set({ hasHydrated: val }),
       setTheme: (theme) => set({ theme }),
@@ -121,6 +139,7 @@ export const useConfigStore = create<ConfigState>()(
       setModelName: (modelName) => set({ modelName }),
       setDefaultPersona: (defaultPersona) => set({ defaultPersona }),
       setUserName: (userName) => set({ userName }),
+      setSuggestionStarters: (suggestionStarters) => set({ suggestionStarters }),
     }),
     {
       name: 'vela-config-storage',

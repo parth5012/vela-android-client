@@ -72,6 +72,20 @@ describe('useConfigStore', () => {
     expect(updatedState.modelName).toBe('gemini-1.5-flash');
   });
 
+  it('should have default suggestion starters', () => {
+    const state = useConfigStore.getState();
+    expect(state.suggestionStarters.length).toBe(3);
+    expect(state.suggestionStarters[0].label).toBe('👩‍🏫 Teach Concept');
+  });
+
+  it('should update suggestion starters correctly', () => {
+    useConfigStore.getState().setSuggestionStarters([
+      { label: 'Test Label', text: 'Test text', persona: 'teacher' }
+    ]);
+    expect(useConfigStore.getState().suggestionStarters.length).toBe(1);
+    expect(useConfigStore.getState().suggestionStarters[0].label).toBe('Test Label');
+  });
+
   it('should store apiKey securely in SecureStore and strip it from AsyncStorage', async () => {
     const state = useConfigStore.getState();
     state.setConfig('https://api.vela.local', 'my-secret-key');
