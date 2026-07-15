@@ -3,6 +3,10 @@ export const ACCENT_COLORS = {
   emerald: '#10b981',
   rose: '#f43f5e',
   amber: '#f59e0b',
+  violet: '#8b5cf6',
+  pink: '#ec4899',
+  orange: '#f97316',
+  blue: '#3b82f6',
 };
 
 export const THEME_COLORS = {
@@ -41,6 +45,42 @@ export const THEME_COLORS = {
     bubbleUserBorder: '#ff00ff',
     bubbleAssistant: 'rgba(0, 255, 204, 0.05)',
     bubbleAssistantBorder: 'rgba(0, 255, 204, 0.2)',
+  },
+  oled: {
+    background: '#000000',
+    card: '#09090b',
+    border: '#18181b',
+    text: '#f4f4f5',
+    textMuted: '#a1a1aa',
+    textDark: '#71717a',
+    bubbleUser: '#09090b',
+    bubbleUserBorder: '#18181b',
+    bubbleAssistant: 'rgba(99, 102, 241, 0.03)',
+    bubbleAssistantBorder: 'rgba(99, 102, 241, 0.15)',
+  },
+  dracula: {
+    background: '#282a36',
+    card: '#44475a',
+    border: '#6272a4',
+    text: '#f8f8f2',
+    textMuted: '#ff79c6',
+    textDark: '#8be9fd',
+    bubbleUser: '#44475a',
+    bubbleUserBorder: '#6272a4',
+    bubbleAssistant: 'rgba(189, 147, 249, 0.05)',
+    bubbleAssistantBorder: 'rgba(189, 147, 249, 0.2)',
+  },
+  nordic: {
+    background: '#2e3440',
+    card: '#3b4252',
+    border: '#4c566a',
+    text: '#d8dee9',
+    textMuted: '#88c0d0',
+    textDark: '#81a1c1',
+    bubbleUser: '#3b4252',
+    bubbleUserBorder: '#4c566a',
+    bubbleAssistant: 'rgba(136, 192, 208, 0.05)',
+    bubbleAssistantBorder: 'rgba(136, 192, 208, 0.2)',
   },
 };
 
