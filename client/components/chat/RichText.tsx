@@ -5,6 +5,7 @@ import Markdown from 'react-native-markdown-display';
 import { parseContent } from '../../utils/latexExtractor';
 import LatexRenderer from './LatexRenderer';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../../utils/theme';
+import MermaidRenderer from './MermaidRenderer';
 
 interface RichTextProps {
   content: string;
@@ -28,6 +29,19 @@ export default function RichText({
     fence: (node: any) => {
       const codeText = node.content || '';
       const lang = node.info || '';
+
+      if (lang.toLowerCase().trim() === 'mermaid') {
+        return (
+          <MermaidRenderer
+            key={node.key}
+            graph={codeText}
+            theme={theme}
+            fontSize={fontSize}
+            accentColor={accentColor}
+          />
+        );
+      }
+
       return (
         <View key={node.key} style={[styles.codeBlockWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <View style={[styles.codeBlockHeader, { borderBottomColor: colors.border }]}>
