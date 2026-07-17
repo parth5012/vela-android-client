@@ -145,6 +145,7 @@ export default function ChatScreen() {
 
   const pendingTokensRef = React.useRef('');
   const throttleTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const cleanUpThrottleAndHeal = useCallback((threadId: string) => {
     if (throttleTimerRef.current) {
@@ -228,11 +229,27 @@ export default function ChatScreen() {
 
   React.useEffect(() => {
     return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (throttleTimerRef.current) {
         clearInterval(throttleTimerRef.current);
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (throttleTimerRef.current) {
+      clearInterval(throttleTimerRef.current);
+      throttleTimerRef.current = null;
+    }
+    pendingTokensRef.current = '';
+    setStreaming(false);
+  }, [activeThreadId]);
 
   React.useEffect(() => {
     if (apiUrl && apiKey) {
@@ -326,6 +343,11 @@ export default function ChatScreen() {
 
     setStreaming(true);
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     // Call SSE API again
     await streamAgentResponse(
       apiUrl,
@@ -345,6 +367,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           const updatedThreads = threads.map((t) =>
@@ -355,10 +378,12 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(activeThreadId, `\n\n⚠️ **Error:** ${errMsg}`);
-      }
+      },
+      abortControllerRef.current.signal
     );
   }, [
     isStreaming,
@@ -680,6 +705,7 @@ export default function ChatScreen() {
     threads,
     personas,
     renderSkillJson,
+    activeThreadId,
   ]);
 
 
@@ -712,6 +738,11 @@ export default function ChatScreen() {
     const activeThread = threads.find((t) => t.id === activeThreadId);
     const selectedPersona = activeThread?.persona || 'personal assistant';
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     // 3. Connect to backend stream
     await streamAgentResponse(
       apiUrl,
@@ -731,6 +762,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           // Update thread title
@@ -742,6 +774,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
@@ -749,7 +782,7 @@ export default function ChatScreen() {
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
-      undefined,
+      abortControllerRef.current.signal,
       selectedPersona
     );
   };
@@ -785,6 +818,11 @@ export default function ChatScreen() {
 
     setStreaming(true);
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     // 4. Stream response
     await streamAgentResponse(
       apiUrl,
@@ -804,6 +842,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(newThreadId);
         if (newTitle) {
           useChatStore.getState().renameThread(newThreadId, newTitle);
@@ -811,6 +850,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        abortControllerRef.current = null;
         cleanUpThrottleAndHeal(newThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
@@ -818,7 +858,7 @@ export default function ChatScreen() {
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
-      undefined,
+      abortControllerRef.current.signal,
       persona
     );
   };
