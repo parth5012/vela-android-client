@@ -14,6 +14,8 @@ import {
   Alert,
   ScrollView,
   Animated,
+  Image,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
@@ -27,6 +29,7 @@ import RichText from '../components/chat/RichText';
 import { streamAgentResponse } from '../utils/sse';
 import CollapsibleBlock from '../components/chat/CollapsibleBlock';
 import { parseMessage } from '../utils/messageParser';
+import { extractSearchSources, SearchSource } from '../utils/sourceParser';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -59,6 +62,50 @@ const QUOTES = [
 const generateId = (prefix: string) => {
   return prefix + '_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
 };
+
+function SourceCard({ src, colors, sizes, accentHex }: { src: SearchSource; colors: any; sizes: any; accentHex: string }) {
+  const [imgError, setImgError] = React.useState(false);
+
+  const handlePress = async () => {
+    try {
+      await Linking.openURL(src.url);
+    } catch (error) {
+      Alert.alert('Error', 'Could not open link in browser.');
+    }
+  };
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.sourceCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: pressed ? 0.75 : 1,
+        },
+      ]}
+      onPress={handlePress}
+    >
+      {!imgError ? (
+        <Image
+          source={{ uri: `https://www.google.com/s2/favicons?sz=64&domain=${src.domain}` }}
+          style={styles.sourceFavicon}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <Text style={[styles.sourceIconEmoji, { fontSize: sizes.sub }]}>🌐</Text>
+      )}
+      <View style={styles.sourceTextContainer}>
+        <Text numberOfLines={1} style={[styles.sourceTitle, { color: colors.text, fontSize: sizes.sub - 1 }]}>
+          {src.title}
+        </Text>
+        <Text numberOfLines={1} style={[styles.sourceDomain, { color: colors.textDark, fontSize: sizes.sub - 3 }]}>
+          {src.domain}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
 
 export default function ChatScreen() {
   const { apiUrl, apiKey, theme, fontSize, accentColor, modelName, defaultPersona, userName, suggestionStarters } = useConfigStore();
@@ -485,6 +532,33 @@ export default function ChatScreen() {
                   }
                   return node;
                 })}
+                {(() => {
+                  const sources = extractSearchSources(item.content);
+                  if (sources.length > 0) {
+                    return (
+                      <View style={{ width: '100%' }}>
+                        <View style={[styles.sourceDivider, { borderTopColor: colors.border }]} />
+                        <View style={styles.sourcesHeader}>
+                          <Text style={[styles.sourcesHeaderTitle, { color: colors.text, fontSize: sizes.sub - 1 }]}>
+                            🌐 Sources Used
+                          </Text>
+                        </View>
+                        <View style={styles.sourcesContainer}>
+                          {sources.map((src, srcIdx) => (
+                            <SourceCard
+                              key={srcIdx}
+                              src={src}
+                              colors={colors}
+                              sizes={sizes}
+                              accentHex={accentHex}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
               </View>
             )}
 
@@ -1151,6 +1225,56 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  sourceDivider: {
+    borderTopWidth: 1,
+    marginTop: 10,
+    marginBottom: 8,
+    width: '100%',
+  },
+  sourcesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  sourcesHeaderTitle: {
+    fontWeight: 'bold',
+  },
+  sourcesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    width: '100%',
+  },
+  sourceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    maxWidth: '100%',
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  sourceFavicon: {
+    width: 14,
+    height: 14,
+    marginRight: 6,
+    borderRadius: 2,
+  },
+  sourceIconEmoji: {
+    marginRight: 6,
+  },
+  sourceTextContainer: {
+    flexDirection: 'column',
+    maxWidth: 160,
+  },
+  sourceTitle: {
+    fontWeight: '500',
+  },
+  sourceDomain: {
+    marginTop: 1,
   },
 });
 
