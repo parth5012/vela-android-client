@@ -22,7 +22,7 @@ export function healXmlTags(content: string): string {
   // Capture group matches standard tags strictly in lowercase
   const TAG_REGEX = /<\/?(thought|intent|call:[a-zA-Z0-9_:]+|skill:[a-zA-Z0-9_:]+|call|skill)(?:\s+input\s*=\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'))?\s*>/g;
 
-  let match;
+  let match: RegExpExecArray | null;
   TAG_REGEX.lastIndex = 0;
   while ((match = TAG_REGEX.exec(content)) !== null) {
     const matchIndex = match.index;
@@ -42,8 +42,8 @@ export function healXmlTags(content: string): string {
       // Close tag - find matching open tag in stack
       let lastOpenIdx = -1;
       if (tagName === 'call' || tagName === 'skill') {
-        // Generic close tag closes last open call/skill tag
-        lastOpenIdx = findLastIndex(stack, s => s.startsWith(tagName + ':'));
+        // Generic close tag closes last open call/skill tag or its named variation
+        lastOpenIdx = findLastIndex(stack, s => s === tagName || s.startsWith(tagName + ':'));
       } else {
         lastOpenIdx = stack.lastIndexOf(tagName);
       }
