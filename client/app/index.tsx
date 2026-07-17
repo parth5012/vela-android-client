@@ -29,7 +29,7 @@ import RichText from '../components/chat/RichText';
 import { streamAgentResponse } from '../utils/sse';
 import CollapsibleBlock from '../components/chat/CollapsibleBlock';
 import { parseMessage } from '../utils/messageParser';
-import { extractSearchSources, SearchSource } from '../utils/sourceParser';
+import { parseSearchContent, SearchSource } from '../utils/sourceParser';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -533,7 +533,24 @@ export default function ChatScreen() {
                   return node;
                 })}
                 {(() => {
-                  const sources = extractSearchSources(item.content);
+                  if (isUser || segments.length === 0) return null;
+                  
+                  // Filter the already-parsed segments for search tool calls
+                  const searchSegments = segments.filter(
+                    (s) =>
+                      s.type === 'tool_call' &&
+                      s.name &&
+                      (s.name.toLowerCase().includes('search') || s.name.toLowerCase().includes('google'))
+                  );
+
+                  if (searchSegments.length === 0) return null;
+
+                  const lastSearchSegment = searchSegments[searchSegments.length - 1];
+                  if (!lastSearchSegment.children || lastSearchSegment.children.length === 0) return null;
+
+                  const rawContent = lastSearchSegment.children.map((c) => c.content || '').join('');
+                  const sources = parseSearchContent(rawContent);
+
                   if (sources.length > 0) {
                     return (
                       <View style={{ width: '100%' }}>
