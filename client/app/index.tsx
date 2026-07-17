@@ -30,6 +30,7 @@ import { streamAgentResponse } from '../utils/sse';
 import CollapsibleBlock from '../components/chat/CollapsibleBlock';
 import { parseMessage } from '../utils/messageParser';
 import { parseSearchContent, SearchSource } from '../utils/sourceParser';
+import { healXmlTags } from '../utils/xmlHealer';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -125,6 +126,7 @@ export default function ChatScreen() {
     truncateThreadHistory,
     branchThread,
     setThreadPersona,
+    setHistory,
   } = useChatStore();
 
   const [input, setInput] = useState('');
@@ -140,6 +142,35 @@ export default function ChatScreen() {
   const [welcomeQuote, setWelcomeQuote] = useState(QUOTES[0]);
   const [welcomeGreeting, setWelcomeGreeting] = useState('Hello');
   const [selectedPersona, setSelectedPersona] = useState(defaultPersona || 'personal assistant');
+
+  const pendingTokensRef = React.useRef('');
+  const throttleTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const cleanUpThrottleAndHeal = useCallback((threadId: string) => {
+    if (throttleTimerRef.current) {
+      clearInterval(throttleTimerRef.current);
+      throttleTimerRef.current = null;
+    }
+    
+    // Flush any leftover tokens
+    if (pendingTokensRef.current) {
+      appendToken(threadId, pendingTokensRef.current);
+      pendingTokensRef.current = '';
+    }
+
+    // Heal XML tags for the last assistant message
+    const threadMsgs = useChatStore.getState().messages[threadId] || [];
+    if (threadMsgs.length > 0) {
+      const last = threadMsgs[threadMsgs.length - 1];
+      if (last.role === 'assistant') {
+        const healed = healXmlTags(last.content);
+        if (healed !== last.content) {
+          const updatedHistory = [...threadMsgs.slice(0, -1), { ...last, content: healed }];
+          setHistory(threadId, updatedHistory);
+        }
+      }
+    }
+  }, [appendToken, setHistory]);
 
   const handleScroll = useCallback((event: any) => {
     const currentOffset = event.nativeEvent.contentOffset.y;
@@ -193,6 +224,14 @@ export default function ChatScreen() {
     }
 
     setStreaming(false);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (throttleTimerRef.current) {
+        clearInterval(throttleTimerRef.current);
+      }
+    };
   }, []);
 
   React.useEffect(() => {
@@ -294,10 +333,19 @@ export default function ChatScreen() {
       activeThreadId,
       userPrompt,
       (chunk) => {
-        appendToken(activeThreadId, chunk);
+        pendingTokensRef.current += chunk;
+        if (!throttleTimerRef.current) {
+          throttleTimerRef.current = setInterval(() => {
+            if (pendingTokensRef.current) {
+              appendToken(activeThreadId, pendingTokensRef.current);
+              pendingTokensRef.current = '';
+            }
+          }, 100);
+        }
       },
       (newTitle) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           const updatedThreads = threads.map((t) =>
             t.id === activeThreadId ? { ...t, title: newTitle } : t
@@ -307,6 +355,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(activeThreadId, `\n\n⚠️ **Error:** ${errMsg}`);
       }
@@ -323,6 +372,7 @@ export default function ChatScreen() {
     setStreaming,
     appendToken,
     setThreads,
+    cleanUpThrottleAndHeal,
   ]);
 
   const handleBranch = useCallback(async (message: Message) => {
@@ -669,10 +719,19 @@ export default function ChatScreen() {
       activeThreadId,
       userText,
       (chunk) => {
-        appendToken(activeThreadId, chunk);
+        pendingTokensRef.current += chunk;
+        if (!throttleTimerRef.current) {
+          throttleTimerRef.current = setInterval(() => {
+            if (pendingTokensRef.current) {
+              appendToken(activeThreadId, pendingTokensRef.current);
+              pendingTokensRef.current = '';
+            }
+          }, 100);
+        }
       },
       (newTitle) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           // Update thread title
           const updatedThreads = threads.map((t) =>
@@ -683,6 +742,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
           activeThreadId,
@@ -732,16 +792,26 @@ export default function ChatScreen() {
       newThreadId,
       textToSend.trim(),
       (chunk) => {
-        appendToken(newThreadId, chunk);
+        pendingTokensRef.current += chunk;
+        if (!throttleTimerRef.current) {
+          throttleTimerRef.current = setInterval(() => {
+            if (pendingTokensRef.current) {
+              appendToken(newThreadId, pendingTokensRef.current);
+              pendingTokensRef.current = '';
+            }
+          }, 100);
+        }
       },
       (newTitle) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(newThreadId);
         if (newTitle) {
           useChatStore.getState().renameThread(newThreadId, newTitle);
         }
       },
       (error) => {
         setStreaming(false);
+        cleanUpThrottleAndHeal(newThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
           newThreadId,
