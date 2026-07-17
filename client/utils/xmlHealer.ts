@@ -5,92 +5,36 @@
 export function healXmlTags(content: string): string {
   if (!content) return '';
 
+  const TAG_REGEX = /<\/?(?:thought|intent|call:[a-zA-Z0-9_:]+|skill:[a-zA-Z0-9_:]+|call|skill)(?:\s+input\s*=\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'))?\s*>/gi;
   const stack: string[] = [];
-  let index = 0;
 
-  // Pattern matching open tags like <call:tool_name input="..."> or <skill:name>
-  const callOpenRegex = /^<call:([a-zA-Z0-9_:]+)(?:\s+input=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'))?\s*>/;
-  const skillOpenRegex = /^<skill:([a-zA-Z0-9_:]+)(?:\s+input=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'))?\s*>/;
+  let match: RegExpExecArray | null;
+  while ((match = TAG_REGEX.exec(content)) !== null) {
+    const tagText = match[0];
+    const isClose = tagText.startsWith('</');
 
-  while (index < content.length) {
-    const textRemaining = content.slice(index);
+    // Extract name: remove <, >, and / then split by space to get the tag name
+    const cleanText = tagText.replace(/[<\/>]/g, '').trim();
+    const tagName = cleanText.split(/\s+/)[0];
 
-    const nextThoughtOpen = textRemaining.indexOf('<thought>');
-    const nextThoughtClose = textRemaining.indexOf('</thought>');
-    const nextIntentOpen = textRemaining.indexOf('<intent>');
-    const nextIntentClose = textRemaining.indexOf('</intent>');
-    
-    const nextCallOpenIndex = textRemaining.indexOf('<call:');
-    const nextCallClose = textRemaining.indexOf('</call');
-    
-    const nextSkillOpenIndex = textRemaining.indexOf('<skill:');
-    const nextSkillClose = textRemaining.indexOf('</skill');
+    if (!isClose) {
+      stack.push(tagName);
+    } else {
+      // Find the last index of a matching tag on the stack and remove it
+      const matchIndex = findLastIndex(stack, (openTag) => {
+        if (tagName === 'thought') return openTag === 'thought';
+        if (tagName === 'intent') return openTag === 'intent';
+        if (tagName === 'call' || tagName.startsWith('call:')) {
+          return openTag === 'call' || openTag.startsWith('call:');
+        }
+        if (tagName === 'skill' || tagName.startsWith('skill:')) {
+          return openTag === 'skill' || openTag.startsWith('skill:');
+        }
+        return false;
+      });
 
-    const targets: { pos: number; type: string; len: number; data?: string }[] = [];
-
-    if (nextThoughtOpen !== -1) targets.push({ pos: nextThoughtOpen, type: 'thought_open', len: 9 });
-    if (nextThoughtClose !== -1) targets.push({ pos: nextThoughtClose, type: 'thought_close', len: 10 });
-    if (nextIntentOpen !== -1) targets.push({ pos: nextIntentOpen, type: 'intent_open', len: 8 });
-    if (nextIntentClose !== -1) targets.push({ pos: nextIntentClose, type: 'intent_close', len: 9 });
-
-    if (nextCallOpenIndex !== -1) {
-      const callMatch = textRemaining.slice(nextCallOpenIndex).match(callOpenRegex);
-      if (callMatch) {
-        targets.push({ pos: nextCallOpenIndex, type: 'call_open', len: callMatch[0].length, data: callMatch[1] });
-      }
-    }
-    if (nextCallClose !== -1) {
-      const closeTagEndIdx = textRemaining.slice(nextCallClose).indexOf('>');
-      if (closeTagEndIdx !== -1) {
-        targets.push({ pos: nextCallClose, type: 'call_close', len: closeTagEndIdx + 1 });
-      }
-    }
-
-    if (nextSkillOpenIndex !== -1) {
-      const skillMatch = textRemaining.slice(nextSkillOpenIndex).match(skillOpenRegex);
-      if (skillMatch) {
-        targets.push({ pos: nextSkillOpenIndex, type: 'skill_open', len: skillMatch[0].length, data: skillMatch[1] });
-      }
-    }
-    if (nextSkillClose !== -1) {
-      const closeTagEndIdx = textRemaining.slice(nextSkillClose).indexOf('>');
-      if (closeTagEndIdx !== -1) {
-        targets.push({ pos: nextSkillClose, type: 'skill_close', len: closeTagEndIdx + 1 });
-      }
-    }
-
-    targets.sort((a, b) => a.pos - b.pos);
-
-    if (targets.length === 0) {
-      break;
-    }
-
-    const target = targets[0];
-    index += target.pos + target.len;
-
-    if (target.type === 'thought_open') {
-      stack.push('thought');
-    } else if (target.type === 'thought_close') {
-      if (stack[stack.length - 1] === 'thought') {
-        stack.pop();
-      }
-    } else if (target.type === 'intent_open') {
-      stack.push('intent');
-    } else if (target.type === 'intent_close') {
-      if (stack[stack.length - 1] === 'intent') {
-        stack.pop();
-      }
-    } else if (target.type === 'call_open') {
-      stack.push(`call:${target.data || 'tool'}`);
-    } else if (target.type === 'call_close') {
-      if (stack.length > 0 && stack[stack.length - 1].startsWith('call:')) {
-        stack.pop();
-      }
-    } else if (target.type === 'skill_open') {
-      stack.push(`skill:${target.data || 'skill'}`);
-    } else if (target.type === 'skill_close') {
-      if (stack.length > 0 && stack[stack.length - 1].startsWith('skill:')) {
-        stack.pop();
+      if (matchIndex !== -1) {
+        stack.splice(matchIndex, 1);
       }
     }
   }
@@ -104,13 +48,26 @@ export function healXmlTags(content: string): string {
     } else if (openTag === 'intent') {
       healedContent += '</intent>';
     } else if (openTag.startsWith('call:')) {
-      const name = openTag.split(':')[1];
+      const name = openTag.split(':').slice(1).join(':');
       healedContent += `</call:${name}>`;
+    } else if (openTag === 'call') {
+      healedContent += '</call>';
     } else if (openTag.startsWith('skill:')) {
-      const name = openTag.split(':')[1];
+      const name = openTag.split(':').slice(1).join(':');
       healedContent += `</skill:${name}>`;
+    } else if (openTag === 'skill') {
+      healedContent += '</skill>';
     }
   }
 
   return healedContent;
+}
+
+function findLastIndex<T>(array: T[], predicate: (value: T) => boolean): number {
+  for (let i = array.length - 1; i >= 0; i--) {
+    if (predicate(array[i])) {
+      return i;
+    }
+  }
+  return -1;
 }
