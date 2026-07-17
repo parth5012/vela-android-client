@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform, Text, Pressable, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Markdown from 'react-native-markdown-display';
@@ -25,7 +25,7 @@ export default function RichText({
   const sizes = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const accentHex = ACCENT_COLORS[accentColor] || ACCENT_COLORS.indigo;
 
-  const rules = {
+  const rules = useMemo(() => ({
     fence: (node: any) => {
       const codeText = node.content || '';
       const lang = node.info || '';
@@ -88,9 +88,9 @@ export default function RichText({
         </View>
       );
     }
-  };
+  }), [theme, fontSize, accentColor, colors, sizes]);
 
-  const dynamicMarkdownStyles = {
+  const dynamicMarkdownStyles = useMemo(() => ({
     body: {
       color: colors.text,
       fontSize: sizes.text,
@@ -178,7 +178,7 @@ export default function RichText({
     em: {
       fontStyle: 'italic' as const,
     },
-  };
+  }), [colors, sizes, accentHex]);
 
   return (
     <View style={styles.container}>
@@ -243,4 +243,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-
