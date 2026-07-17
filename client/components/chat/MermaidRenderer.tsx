@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Platform, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Clipboard from 'expo-clipboard';
@@ -10,6 +10,9 @@ interface MermaidRendererProps {
   fontSize?: 'small' | 'medium' | 'large';
   accentColor?: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet' | 'pink' | 'orange' | 'blue';
 }
+
+const LT_REGEX = /</g;
+const NEWLINE_END_REGEX = /\n$/;
 
 export default function MermaidRenderer({
   graph,
@@ -33,9 +36,14 @@ export default function MermaidRenderer({
   function renderSourceView() {
     return (
       <View style={[styles.codeBlockWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        {hasError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>⚠️ Mermaid render failed. Showing source view.</Text>
+          </View>
+        )}
         <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
           <Text style={[styles.codeText, { color: colors.text, fontSize: sizes.text - 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-            {graph.replace(/\n$/, '')}
+            {graph.replace(NEWLINE_END_REGEX, '')}
           </Text>
         </ScrollView>
       </View>
@@ -45,12 +53,13 @@ export default function MermaidRenderer({
   const isDark = theme !== 'slate'; // Slate is the only light-like theme
   const mermaidTheme = isDark ? 'dark' : 'default';
 
-  const htmlContent = `
+  const safeGraph = useMemo(() => JSON.stringify(graph).replace(LT_REGEX, '\\u003c'), [graph]);
+
+  const htmlContent = useMemo(() => `
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <script src="https://cdn.jsdelivr.net/npm/mermaid@10.2.4/dist/mermaid.min.js"></script>
       <style>
         body {
           margin: 0;
@@ -82,6 +91,14 @@ export default function MermaidRenderer({
           border-radius: 6px;
         }
       </style>
+      <script>
+        function handleScriptError() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ error: true }));
+          }
+        }
+      </script>
+      <script src="https://cdn.jsdelivr.net/npm/mermaid@10.2.4/dist/mermaid.min.js" onerror="handleScriptError()"></script>
     </head>
     <body>
       <div id="diagram">Rendering...</div>
@@ -89,15 +106,19 @@ export default function MermaidRenderer({
         document.addEventListener("DOMContentLoaded", function() {
           const container = document.getElementById('diagram');
           try {
+            if (typeof mermaid === 'undefined') {
+              showError('Mermaid library not loaded');
+              return;
+            }
             mermaid.initialize({
               startOnLoad: false,
               theme: '${mermaidTheme}',
-              securityLevel: 'loose',
+              securityLevel: 'strict',
               logLevel: 4,
             });
 
             const uniqueId = 'mermaid-svg-' + Date.now();
-            const rawGraph = ${JSON.stringify(graph)};
+            const rawGraph = ${safeGraph};
 
             mermaid.render(uniqueId, rawGraph).then(({ svg }) => {
               container.innerHTML = svg;
@@ -131,7 +152,9 @@ export default function MermaidRenderer({
       </script>
     </body>
     </html>
-  `;
+  `, [colors.text, mermaidTheme, safeGraph]);
+
+  const webViewSource = useMemo(() => ({ html: htmlContent }), [htmlContent]);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(graph);
@@ -144,7 +167,7 @@ export default function MermaidRenderer({
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
         <View style={styles.tabsContainer}>
           <Pressable
-            style={[styles.tabButton, activeTab === 'diagram' && { borderBottomColor: accentHex }]}
+            style={[styles.tabButton, activeTab === 'diagram' ? { borderBottomColor: accentHex } : null]}
             onPress={() => setActiveTab('diagram')}
           >
             <Text style={[styles.tabText, { color: activeTab === 'diagram' ? colors.text : colors.textDark, fontSize: sizes.sub, fontWeight: activeTab === 'diagram' ? 'bold' : 'normal' }]}>
@@ -152,7 +175,7 @@ export default function MermaidRenderer({
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.tabButton, activeTab === 'source' && { borderBottomColor: accentHex }]}
+            style={[styles.tabButton, activeTab === 'source' ? { borderBottomColor: accentHex } : null]}
             onPress={() => setActiveTab('source')}
           >
             <Text style={[styles.tabText, { color: activeTab === 'source' ? colors.text : colors.textDark, fontSize: sizes.sub, fontWeight: activeTab === 'source' ? 'bold' : 'normal' }]}>
@@ -169,11 +192,11 @@ export default function MermaidRenderer({
       </View>
 
       {/* Render Active View */}
-      {activeTab === 'diagram' ? (
+      {activeTab === 'diagram' && !hasError ? (
         <View style={[styles.webviewContainer, { height: height }]}>
           <WebView
             originWhitelist={['*']}
-            source={{ html: htmlContent }}
+            source={webViewSource}
             style={styles.webview}
             scrollEnabled={false}
             overScrollMode="never"
@@ -181,7 +204,13 @@ export default function MermaidRenderer({
               try {
                 const data = JSON.parse(event.nativeEvent.data);
                 if (data.height) {
-                  setHeight(Math.max(data.height, 80));
+                  const newHeight = Math.max(data.height, 80);
+                  setHeight((prevHeight) => {
+                    if (Math.abs(newHeight - prevHeight) > 2) {
+                      return newHeight;
+                    }
+                    return prevHeight;
+                  });
                 }
                 if (data.error) {
                   setHasError(true);
@@ -250,5 +279,18 @@ const styles = StyleSheet.create({
   },
   codeText: {
     lineHeight: 18,
+  },
+  errorBanner: {
+    padding: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

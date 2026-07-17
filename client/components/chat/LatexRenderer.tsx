@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -14,10 +14,13 @@ interface LatexRendererProps {
   displayMode?: boolean;
 }
 
+const LT_REGEX = /</g;
+
 export default function LatexRenderer({ formula, displayMode = false }: LatexRendererProps) {
   const [height, setHeight] = useState(displayMode ? 60 : 30);
+  const [hasError, setHasError] = useState(false);
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || hasError) {
     return (
       <View style={[styles.fallbackContainer, displayMode && styles.blockPadding]}>
         <Text style={styles.fallbackText}>
@@ -27,13 +30,14 @@ export default function LatexRenderer({ formula, displayMode = false }: LatexRen
     );
   }
 
-  const htmlContent = `
+  const safeFormula = useMemo(() => JSON.stringify(formula).replace(LT_REGEX, '\\u003c'), [formula]);
+
+  const htmlContent = useMemo(() => `
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
       <style>
         body {
           margin: 0;
@@ -52,6 +56,14 @@ export default function LatexRenderer({ formula, displayMode = false }: LatexRen
           margin: 0.5em 0 !important;
         }
       </style>
+      <script>
+        function handleScriptError() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ error: true }));
+          }
+        }
+      </script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" onerror="handleScriptError()"></script>
     </head>
     <body>
       <div id="math"></div>
@@ -59,14 +71,24 @@ export default function LatexRenderer({ formula, displayMode = false }: LatexRen
         document.addEventListener("DOMContentLoaded", function() {
           const container = document.getElementById('math');
           try {
-            katex.render(${JSON.stringify(formula)}, container, {
+            if (typeof katex === 'undefined') {
+              showError();
+              return;
+            }
+            katex.render(${safeFormula}, container, {
               displayMode: ${displayMode},
               throwOnError: false
             });
           } catch (err) {
-            container.innerText = ${JSON.stringify(formula)};
+            container.innerText = ${safeFormula};
           }
           
+          function showError() {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ error: true }));
+            }
+          }
+
           function sendHeight() {
             const height = document.documentElement.scrollHeight || document.body.scrollHeight;
             if (window.ReactNativeWebView) {
@@ -81,13 +103,15 @@ export default function LatexRenderer({ formula, displayMode = false }: LatexRen
       </script>
     </body>
     </html>
-  `;
+  `, [safeFormula, displayMode]);
+
+  const webViewSource = useMemo(() => ({ html: htmlContent }), [htmlContent]);
 
   return (
     <View style={[styles.container, { height: height }, displayMode && styles.blockPadding]}>
       <WebView
         originWhitelist={['*']}
-        source={{ html: htmlContent }}
+        source={webViewSource}
         style={styles.webview}
         scrollEnabled={false}
         overScrollMode="never"
@@ -95,7 +119,16 @@ export default function LatexRenderer({ formula, displayMode = false }: LatexRen
           try {
             const data = JSON.parse(event.nativeEvent.data);
             if (data.height) {
-              setHeight(data.height);
+              const newHeight = data.height;
+              setHeight((prevHeight) => {
+                if (Math.abs(newHeight - prevHeight) > 2) {
+                  return newHeight;
+                }
+                return prevHeight;
+              });
+            }
+            if (data.error) {
+              setHasError(true);
             }
           } catch (e) {
             // Ignore parsing errors
