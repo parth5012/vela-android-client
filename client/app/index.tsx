@@ -31,7 +31,8 @@ import CollapsibleBlock from '../components/chat/CollapsibleBlock';
 import { parseMessage } from '../utils/messageParser';
 import { parseSearchContent, SearchSource } from '../utils/sourceParser';
 import { healXmlTags } from '../utils/xmlHealer';
-import { WebView } from 'react-native-webview';
+import { useRouter } from 'expo-router';
+import { useBrowserStore } from '../store/useBrowserStore';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -135,12 +136,7 @@ export default function ChatScreen() {
   const [showRawMap, setShowRawMap] = useState<Record<string, boolean>>({});
   const [personas, setPersonas] = useState<any[]>(DEFAULT_PERSONAS);
 
-  const [webviewUrl, setWebviewUrl] = useState('about:blank');
-  const [showWebview, setShowWebview] = useState(false);
-  const [isWebviewLoading, setIsWebviewLoading] = useState(false);
-  const [pendingAction, setPendingAction] = useState<any>(null);
-  const [lastExecutedId, setLastExecutedId] = useState<string | null>(null);
-  const webViewRef = React.useRef<any>(null);
+  const router = useRouter();
 
   // Animated values and references for collapsing persona selector bar
   const personaBarHeight = React.useRef(new Animated.Value(58)).current;
@@ -152,7 +148,7 @@ export default function ChatScreen() {
   const [selectedPersona, setSelectedPersona] = useState(defaultPersona || 'personal assistant');
 
   const pendingTokensRef = React.useRef('');
-  const throttleTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const throttleTimerRef = React.useRef<any>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const cleanUpThrottleAndHeal = useCallback((threadId: string) => {
@@ -285,191 +281,17 @@ export default function ChatScreen() {
     }
   }, [apiUrl, apiKey]);
 
-  const sendWebviewResponseToBackend = useCallback(async (conversationId: string, status: string, result: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/chat/webview/response`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          status: status,
-          result: result
-        })
-      });
-      if (!response.ok) {
-        console.error("Failed to send webview response to backend: Status", response.status);
-      }
-    } catch (err) {
-      console.error("Network error sending webview response to backend:", err);
-    }
-  }, [apiUrl, apiKey]);
-
-  const executeScriptForAction = useCallback((action: string, target?: string, value?: string) => {
-    if (!webViewRef.current) return;
-    
-    if (action === 'extract_dom') {
-      const cleanDomScript = `
-        (function() {
-          try {
-            var elements = document.querySelectorAll('button, a, input, textarea, select, [role="button"], h1, h2, h3');
-            var results = [];
-            var counter = 0;
-            elements.forEach(function(el) {
-              var rect = el.getBoundingClientRect();
-              if (rect.width === 0 || rect.height === 0) return;
-              var style = window.getComputedStyle(el);
-              if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
-
-              var refId = 'e' + counter++;
-              el.setAttribute('data-vela-id', refId);
-
-              var text = (el.innerText || el.placeholder || el.value || '').trim();
-              if (text.length > 100) {
-                text = text.substring(0, 100) + '...';
-              }
-
-              results.push({
-                id: '@' + refId,
-                tag: el.tagName.toLowerCase(),
-                type: el.type || '',
-                text: text,
-                title: el.title || '',
-                placeholder: el.placeholder || ''
-              });
-            });
-            window.ReactNativeWebView.postMessage(JSON.stringify({type: 'dom_extracted', data: results}));
-          } catch(e) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', data: e.message}));
-          }
-        })();
-      `;
-      webViewRef.current.injectJavaScript(cleanDomScript);
-    } 
-    else if (action === 'click' && target) {
-      const clickScript = `
-        (function() {
-          try {
-            var el;
-            if ("${target}".startsWith("@e")) {
-              var velaId = "${target}".substring(1);
-              el = document.querySelector('[data-vela-id="' + velaId + '"]');
-            } else {
-              el = document.querySelector("${target}");
-            }
-            if (el) {
-              el.click();
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'click_success', data: 'Successfully clicked element: ' + "${target}"}));
-            } else {
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', data: 'Element not found: ' + "${target}"}));
-            }
-          } catch(e) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', data: e.message}));
-          }
-        })();
-      `;
-      webViewRef.current.injectJavaScript(clickScript);
-    } 
-    else if (action === 'fill' && target && value !== undefined) {
-      const escapedValue = JSON.stringify(value);
-      const fillScript = `
-        (function() {
-          try {
-            var el;
-            if ("${target}".startsWith("@e")) {
-              var velaId = "${target}".substring(1);
-              el = document.querySelector('[data-vela-id="' + velaId + '"]');
-            } else {
-              el = document.querySelector("${target}");
-            }
-            if (el) {
-              el.focus();
-              el.value = ${escapedValue};
-              el.dispatchEvent(new Event('input', { bubbles: true }));
-              el.dispatchEvent(new Event('change', { bubbles: true }));
-              el.blur();
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'fill_success', data: 'Successfully filled element: ' + "${target}"}));
-            } else {
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', data: 'Element not found: ' + "${target}"}));
-            }
-          } catch(e) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', data: e.message}));
-          }
-        })();
-      `;
-      webViewRef.current.injectJavaScript(fillScript);
-    }
-  }, []);
-
-  const handleWebViewLoadEnd = useCallback(() => {
-    setIsWebviewLoading(false);
-    if (pendingAction && pendingAction.action === 'navigate') {
-      sendWebviewResponseToBackend(pendingAction.conversation_id, 'success', `Successfully loaded URL: ${pendingAction.value}`);
-      setPendingAction(null);
-    }
-  }, [pendingAction, sendWebviewResponseToBackend]);
-
-  const handleWebViewMessage = useCallback((event: any) => {
-    try {
-      const response = JSON.parse(event.nativeEvent.data);
-      if (!pendingAction) return;
-
-      if (response.type === 'dom_extracted') {
-        const domString = JSON.stringify(response.data);
-        sendWebviewResponseToBackend(pendingAction.conversation_id, 'success', domString);
-        setPendingAction(null);
-      } else if (response.type === 'click_success' || response.type === 'fill_success') {
-        sendWebviewResponseToBackend(pendingAction.conversation_id, 'success', response.data);
-        setPendingAction(null);
-      } else if (response.type === 'error') {
-        sendWebviewResponseToBackend(pendingAction.conversation_id, 'error', response.data);
-        setPendingAction(null);
-      }
-    } catch (e) {
-      console.error("Failed to parse webview message:", e);
-      if (pendingAction) {
-        sendWebviewResponseToBackend(pendingAction.conversation_id, 'error', 'Invalid message format from WebView');
-        setPendingAction(null);
-      }
-    }
-  }, [pendingAction, sendWebviewResponseToBackend]);
-
-  const handleWebviewAction = useCallback(async (input: { conversation_id: string; action: string; target?: string; value?: string }) => {
-    setShowWebview(true);
-    
-    if (input.action === 'navigate' && input.value) {
-      setIsWebviewLoading(true);
-      setWebviewUrl(input.value);
-      setPendingAction({
-        conversation_id: input.conversation_id,
-        action: 'navigate',
-        value: input.value
-      });
-    } else {
-      setPendingAction({
-        conversation_id: input.conversation_id,
-        action: input.action,
-        target: input.target,
-        value: input.value
-      });
-      setTimeout(() => {
-        executeScriptForAction(input.action, input.target, input.value);
-      }, 300);
-    }
-  }, [executeScriptForAction]);
-
-  const activeMessages = activeThreadId ? messages[activeThreadId] || [] : [];
+  const activeMessages = activeThreadId ? messages[activeThreadId] : [];
   const lastMsg = activeMessages[activeMessages.length - 1];
 
+  // Webview browser tag parser - dispatches to browser store
   React.useEffect(() => {
     if (!lastMsg || lastMsg.role !== 'assistant' || !activeThreadId) return;
 
     const regex = /<call:webview_browser\s+input="((?:[^"\\]|\\.)*)"\s*>/g;
     let match;
-    let lastMatch = null;
-    
+    let lastMatch: RegExpExecArray | null = null;
+
     while ((match = regex.exec(lastMsg.content)) !== null) {
       lastMatch = match;
     }
@@ -477,20 +299,22 @@ export default function ChatScreen() {
     if (lastMatch) {
       const rawInput = lastMatch[1];
       const executionId = `${lastMsg.id}_${lastMatch.index}`;
-      
+      const { lastExecutedId } = useBrowserStore.getState();
+
       if (lastExecutedId !== executionId) {
-        setLastExecutedId(executionId);
-        
+        useBrowserStore.getState().setLastExecutedId(executionId);
+
         try {
           const unescaped = rawInput.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
           const parsedInput = JSON.parse(unescaped);
-          handleWebviewAction(parsedInput);
+          useBrowserStore.getState().handleWebviewAction(parsedInput);
+          router.push('/browser');
         } catch (e) {
           console.error("Failed to parse webview_browser input:", e);
         }
       }
     }
-  }, [lastMsg?.content, activeThreadId, lastExecutedId, handleWebviewAction]);
+  }, [lastMsg?.content, activeThreadId, router]);
   const reversedMessages = useMemo(() => {
     return [...activeMessages].reverse();
   }, [activeMessages]);
@@ -1236,30 +1060,6 @@ export default function ChatScreen() {
         </ScrollView>
       )}
 
-      {activeThreadId && showWebview && (
-        <View style={[styles.webviewContainer, { borderColor: colors.border }]}>
-          <View style={[styles.webviewHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-            <Text style={[styles.webviewTitleStyle, { color: colors.text, fontSize: sizes.sub }]} numberOfLines={1}>
-              🌐 Vela Web Agent: {webviewUrl || 'Loading...'}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-              {isWebviewLoading && <ActivityIndicator size="small" color={accentHex} />}
-              <Pressable onPress={() => setShowWebview(false)}>
-                <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 1, fontWeight: 'bold' }}>Hide</Text>
-              </Pressable>
-            </View>
-          </View>
-          <WebView
-            ref={webViewRef}
-            source={{ uri: webviewUrl }}
-            style={styles.webview}
-            onMessage={handleWebViewMessage}
-            onLoadStart={() => setIsWebviewLoading(true)}
-            onLoadEnd={handleWebViewLoadEnd}
-          />
-        </View>
-      )}
-
       {/* Unifying Input container at the bottom */}
       <View style={[styles.inputContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <TextInput
@@ -1648,29 +1448,6 @@ const styles = StyleSheet.create({
   },
   sourceDomain: {
     marginTop: 1,
-  },
-  webviewContainer: {
-    height: 350,
-    width: '100%',
-    borderTopWidth: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  webviewHeader: {
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  webviewTitleStyle: {
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 12,
-  },
-  webview: {
-    flex: 1,
   },
 });
 

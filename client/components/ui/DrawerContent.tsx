@@ -86,6 +86,13 @@ export default function DrawerContent() {
     }
   };
 
+  const handleBrowser = () => {
+    router.navigate('/browser');
+    if (typeof navigation.closeDrawer === 'function') {
+      navigation.closeDrawer();
+    }
+  };
+
   const sortedThreads = React.useMemo(() => {
     return [...threads].sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
@@ -200,6 +207,17 @@ export default function DrawerContent() {
           <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>
             {isSyncing ? 'Syncing...' : 'Refresh Chats'}
           </Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.settingsButton,
+            pressed && styles.settingsButtonPressed,
+            pressed && { backgroundColor: colors.card },
+            { marginBottom: 8 },
+          ]}
+          onPress={handleBrowser}
+        >
+          <Text style={[styles.settingsButtonText, { color: colors.textMuted }]}>🌐 Browser</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [

@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore } from '../store/useChatStore';
 import DrawerContent from '../components/ui/DrawerContent';
 import HealthIndicator from '../components/ui/HealthIndicator';
-import { Platform } from 'react-native';
+import WebView from 'react-native-webview';
+import {
+  useBrowserStore,
+  webViewRef,
+  handleWebViewLoadEnd,
+  handleWebViewMessage,
+} from '../store/useBrowserStore';
 
 
 export default function RootLayout() {
@@ -55,52 +61,96 @@ export default function RootLayout() {
     return <Slot />;
   }
 
+  const currentUrl = useBrowserStore((s) => s.currentUrl);
+  const isBrowserVisible = useBrowserStore((s) => s.isVisible);
+
   return (
-    <Drawer
-      drawerContent={() => <DrawerContent />}
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#09090b',
-          shadowColor: 'transparent',
-          elevation: 0,
-        },
-        headerTitleStyle: {
-          fontWeight: '900',
-          color: '#818cf8',
-          fontSize: 16,
-        },
-        headerTintColor: '#e4e4e7',
-        headerRight: () => <HealthIndicator />,
-        drawerStyle: {
-          backgroundColor: '#09090b',
-          width: 280,
-        },
-      }}
-    >
-      <Drawer.Screen
-        name="index"
-        options={{
-          headerTitle: 'VELA',
+    <View style={{ flex: 1 }}>
+      <Drawer
+        drawerContent={() => <DrawerContent />}
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#09090b',
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
           headerTitleStyle: {
             fontWeight: '900',
-            letterSpacing: 3,
             color: '#818cf8',
             fontSize: 16,
-          }
+          },
+          headerTintColor: '#e4e4e7',
+          headerRight: () => <HealthIndicator />,
+          drawerStyle: {
+            backgroundColor: '#09090b',
+            width: 280,
+          },
         }}
-      />
-      <Drawer.Screen
-        name="settings"
-        options={{
-          headerTitle: 'Settings',
-          headerTitleStyle: {
-            fontWeight: '600',
-            color: '#e4e4e7',
-            fontSize: 16,
-          }
-        }}
-      />
-    </Drawer>
+      >
+        <Drawer.Screen
+          name="index"
+          options={{
+            headerTitle: 'VELA',
+            headerTitleStyle: {
+              fontWeight: '900',
+              letterSpacing: 3,
+              color: '#818cf8',
+              fontSize: 16,
+            },
+          }}
+        />
+        <Drawer.Screen
+          name="settings"
+          options={{
+            headerTitle: 'Settings',
+            headerTitleStyle: {
+              fontWeight: '600',
+              color: '#e4e4e7',
+              fontSize: 16,
+            },
+          }}
+        />
+        <Drawer.Screen
+          name="browser"
+          options={{
+            headerTitle: 'Browser',
+            headerTitleStyle: {
+              fontWeight: '600',
+              color: '#e4e4e7',
+              fontSize: 16,
+            },
+          }}
+        />
+      </Drawer>
+
+      {/* Persistent WebView — always mounted, visibility toggled */}
+      <View
+        style={[
+          styles.persistentWebview,
+          { display: isBrowserVisible ? 'flex' : 'none' },
+        ]}
+        pointerEvents={isBrowserVisible ? 'auto' : 'none'}
+      >
+        <WebView
+          ref={webViewRef}
+          source={{ uri: currentUrl }}
+          style={{ flex: 1 }}
+          onLoadEnd={handleWebViewLoadEnd}
+          onMessage={handleWebViewMessage}
+          onNavigationStateChange={(navState) => {
+            useBrowserStore.getState().setNavState(
+              navState.canGoBack,
+              navState.canGoForward,
+              navState.url,
+              navState.title || ''
+            );
+          }}
+          javaScriptEnabled
+          domStorageEnabled
+          startInLoadingState
+        />
+      </View>
+    </View>
   );
 }
 
@@ -110,5 +160,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#09090b',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  persistentWebview: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // Leave space for header (~56px on Android, ~96px on iOS)
+    // plus URL bar (~54px) and toolbar (~38px)
+    top: Platform.OS === 'ios' ? 190 : 148,
   },
 });
