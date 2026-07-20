@@ -169,10 +169,22 @@ const buildFillScript = (target: string, value: string): string => {
 
 // --- Backend communication ---
 
+const normalizeUrl = (rawUrl: string): string => {
+  let formatted = (rawUrl || '').trim();
+  if (!formatted) return '';
+  if (!/^https?:\/\//i.test(formatted)) {
+    formatted = 'https://' + formatted;
+  }
+  return formatted.replace(/\/+$/, '');
+};
+
 const sendResponse = async (conversationId: string, status: string, result: string): Promise<void> => {
+  if (!conversationId) return;
   const { apiUrl, apiKey } = useConfigStore.getState();
+  const formattedUrl = normalizeUrl(apiUrl);
+  if (!formattedUrl || !apiKey) return;
   try {
-    const response = await fetch(`${apiUrl}/chat/webview/response`, {
+    const response = await fetch(`${formattedUrl}/chat/webview/response`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

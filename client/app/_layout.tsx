@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform, Pressable, Text } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
 import { useChatStore } from '../store/useChatStore';
 import DrawerContent from '../components/ui/DrawerContent';
@@ -14,6 +14,45 @@ import {
   handleWebViewMessage,
 } from '../store/useBrowserStore';
 
+
+function HeaderRightActions() {
+  const router = useRouter();
+  const segments = useSegments();
+  const isBrowserRoute = segments[0] === 'browser';
+
+  const handleToggle = () => {
+    if (isBrowserRoute) {
+      router.navigate('/');
+    } else {
+      router.navigate('/browser');
+    }
+  };
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+      <Pressable
+        onPress={handleToggle}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: isBrowserRoute ? '#312e81' : '#1e1b4b',
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 6,
+          marginRight: 8,
+          borderWidth: 1,
+          borderColor: isBrowserRoute ? '#818cf8' : '#4f46e5',
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Text style={{ color: '#e0e7ff', fontSize: 12, fontWeight: 'bold' }}>
+          {isBrowserRoute ? '💬 Chat' : '🌐 Webview'}
+        </Text>
+      </Pressable>
+      <HealthIndicator />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const isConfigured = useConfigStore((state) => state.isConfigured);
@@ -81,9 +120,9 @@ export default function RootLayout() {
             color: '#818cf8',
             fontSize: 16,
           },
-          headerTintColor: '#e4e4e7',
-          headerRight: () => <HealthIndicator />,
-          drawerStyle: {
+        headerTintColor: '#e4e4e7',
+        headerRight: () => <HeaderRightActions />,
+        drawerStyle: {
             backgroundColor: '#09090b',
             width: 280,
           },

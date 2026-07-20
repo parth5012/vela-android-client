@@ -150,6 +150,7 @@ export default function ChatScreen() {
   const pendingTokensRef = React.useRef('');
   const throttleTimerRef = React.useRef<any>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const streamingThreadIdRef = React.useRef<string | null>(null);
 
   const cleanUpThrottleAndHeal = useCallback((threadId: string) => {
     if (throttleTimerRef.current) {
@@ -243,16 +244,19 @@ export default function ChatScreen() {
   }, []);
 
   React.useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    if (streamingThreadIdRef.current !== activeThreadId) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (throttleTimerRef.current) {
+        clearInterval(throttleTimerRef.current);
+        throttleTimerRef.current = null;
+      }
+      pendingTokensRef.current = '';
+      streamingThreadIdRef.current = null;
+      setStreaming(false);
     }
-    if (throttleTimerRef.current) {
-      clearInterval(throttleTimerRef.current);
-      throttleTimerRef.current = null;
-    }
-    pendingTokensRef.current = '';
-    setStreaming(false);
   }, [activeThreadId]);
 
   React.useEffect(() => {
@@ -383,6 +387,7 @@ export default function ChatScreen() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    streamingThreadIdRef.current = activeThreadId;
     abortControllerRef.current = new AbortController();
 
     // Call SSE API again
@@ -404,6 +409,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
@@ -415,6 +421,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
@@ -786,6 +793,7 @@ export default function ChatScreen() {
     const activeThread = threads.find((t) => t.id === activeThreadId);
     const selectedPersona = activeThread?.persona || 'personal assistant';
 
+    streamingThreadIdRef.current = activeThreadId;
     abortControllerRef.current = new AbortController();
 
     // 3. Connect to backend stream
@@ -807,6 +815,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
@@ -819,6 +828,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
@@ -875,6 +885,7 @@ export default function ChatScreen() {
 
     setStreaming(true);
 
+    streamingThreadIdRef.current = newThreadId;
     abortControllerRef.current = new AbortController();
 
     // 4. Stream response
@@ -896,6 +907,7 @@ export default function ChatScreen() {
       },
       (newTitle) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(newThreadId);
         if (newTitle) {
@@ -904,6 +916,7 @@ export default function ChatScreen() {
       },
       (error) => {
         setStreaming(false);
+        streamingThreadIdRef.current = null;
         abortControllerRef.current = null;
         cleanUpThrottleAndHeal(newThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';

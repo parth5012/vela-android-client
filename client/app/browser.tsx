@@ -142,9 +142,9 @@ export default function BrowserScreen() {
           </Text>
         </View>
 
-        <Pressable onPress={handleClose} style={styles.toolbarButton}>
-          <Text style={[styles.toolbarButtonText, { color: colors.textMuted, fontWeight: 'bold' }]}>✕</Text>
-        </Pressable>
+      <Pressable onPress={handleClose} style={[styles.toolbarButton, { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: colors.border }]}>
+        <Text style={[styles.toolbarButtonText, { color: colors.text, fontSize: sizes.sub, fontWeight: 'bold' }]}>💬 Chat</Text>
+      </Pressable>
       </View>
 
       {/* WebView area — the actual WebView is mounted in _layout.tsx and made visible here */}
