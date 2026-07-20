@@ -122,7 +122,7 @@ export const useChatStore = create<ChatState>()(
         if (config.apiUrl && config.apiKey) {
           const formattedUrl = normalizeUrl(config.apiUrl);
           try {
-            const res = await fetch(`${formattedUrl}/chats/threads`, {
+            const res = await fetch(`${formattedUrl}/chat/threads`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${config.apiKey.trim()}`,

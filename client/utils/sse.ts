@@ -1,5 +1,14 @@
 import { Platform } from 'react-native';
 
+const normalizeUrl = (rawUrl: string): string => {
+  let formattedUrl = (rawUrl || '').trim();
+  if (!formattedUrl) return '';
+  if (!/^https?:\/\//i.test(formattedUrl)) {
+    formattedUrl = 'https://' + formattedUrl;
+  }
+  return formattedUrl.replace(/\/+$/, '');
+};
+
 export async function streamAgentResponse(
   url: string,
   apiKey: string,
@@ -10,13 +19,18 @@ export async function streamAgentResponse(
   onError: (error: Error) => void,
   signal?: AbortSignal,
   persona?: string
-) {
+): Promise<void> {
   try {
+    const formattedUrl = normalizeUrl(url);
+    if (!formattedUrl) {
+      throw new Error('API URL is not configured.');
+    }
+
     const sseFetch = Platform.OS !== 'web' && process.env.NODE_ENV !== 'test'
       ? require('react-native-fetch-api').fetch
       : fetch;
 
-    const response = await sseFetch(`${url}/chat/message`, {
+    const response = await sseFetch(`${formattedUrl}/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

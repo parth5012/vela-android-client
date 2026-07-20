@@ -748,6 +748,10 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     if (!input.trim() || !activeThreadId) return;
+    if (!apiUrl || !apiKey) {
+      Alert.alert('Configuration Required', 'Please configure your API URL and Key in Settings.');
+      return;
+    }
     Keyboard.dismiss();
 
     if (isStreaming) {
@@ -831,6 +835,10 @@ export default function ChatScreen() {
 
   const handleSendWelcome = async (textToSend: string, personaId?: string) => {
     if (!textToSend.trim()) return;
+    if (!apiUrl || !apiKey) {
+      Alert.alert('Configuration Required', 'Please configure your API URL and Key in Settings.');
+      return;
+    }
     Keyboard.dismiss();
 
     if (isStreaming) {

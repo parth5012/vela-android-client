@@ -50,3 +50,4 @@ __tests__/
 .agents/
 credentials/
 .claude/
+.tmp\

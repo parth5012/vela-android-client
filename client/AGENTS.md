@@ -56,3 +56,5 @@ npx expo prebuild --clean   # regenerate native dirs after config changes
 `graphify-out/` contains a pre-built knowledge graph. Query it before reading files blindly:
 - God nodes: `useConfigStore` (11 edges), `useChatStore` (7 edges)
 - 4 screens, 8 communities, 117 nodes
+
+opencode -s ses_0820959d9ffeB1IjaDsiDXT6Je
