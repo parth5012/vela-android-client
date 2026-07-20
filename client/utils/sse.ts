@@ -54,6 +54,8 @@ export async function streamAgentResponse(
               onChunk(parsed.delta);
             } else if (parsed.type === 'done') {
               onDone(parsed.thread_title);
+            } else if (parsed.type === 'error') {
+              onError(new Error(parsed.message || 'Unknown server error'));
             }
           } catch {
             // Ignore malformed JSON
@@ -77,6 +79,8 @@ export async function streamAgentResponse(
               onChunk(parsed.delta);
             } else if (parsed.type === 'done') {
               onDone(parsed.thread_title);
+            } else if (parsed.type === 'error') {
+              onError(new Error(parsed.message || 'Unknown server error'));
             }
           } catch {
             // Ignore malformed JSON chunks
