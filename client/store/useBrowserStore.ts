@@ -184,23 +184,39 @@ const sendResponse = async (conversationId: string, status: string, result: stri
   const formattedUrl = normalizeUrl(apiUrl);
   if (!formattedUrl || !apiKey) return;
   try {
-    const response = await fetch(`${formattedUrl}/chat/webview/response`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        conversation_id: conversationId,
-        status,
-        result,
-      }),
-    });
-    if (!response.ok) {
-      console.error('Failed to send webview response to backend: Status', response.status);
-    }
+      let response = await fetch(`${formattedUrl}/chat/webview/response`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          status,
+          result,
+        }),
+      });
+
+      if (response.status === 404 || response.status === 405) {
+        response = await fetch(`${formattedUrl}/webview/response`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey.trim()}`,
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            status,
+            result,
+          }),
+        });
+      }
+
+      if (!response.ok && response.status !== 404 && response.status !== 405) {
+        console.warn('Webview response endpoint status:', response.status);
+      }
   } catch (err) {
-    console.error('Network error sending webview response to backend:', err);
+    console.warn('Network notice sending webview response to backend:', err);
   }
 };
 

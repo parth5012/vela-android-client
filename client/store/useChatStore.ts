@@ -117,31 +117,61 @@ export const useChatStore = create<ChatState>()(
           }
         };
       }),
-      renameThread: async (id, newTitle) => {
-        const config = useConfigStore.getState();
-        if (config.apiUrl && config.apiKey) {
-          const formattedUrl = normalizeUrl(config.apiUrl);
-          try {
-            const res = await fetch(`${formattedUrl}/chat/threads`, {
+    renameThread: async (id, newTitle) => {
+      const config = useConfigStore.getState();
+      if (config.apiUrl && config.apiKey) {
+        const formattedUrl = normalizeUrl(config.apiUrl);
+        try {
+          let res = await fetch(`${formattedUrl}/chat/threads/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${config.apiKey.trim()}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title: newTitle }),
+          });
+
+          if (res.status === 405 || res.status === 404) {
+            res = await fetch(`${formattedUrl}/chat/threads/${id}/rename`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${config.apiKey.trim()}`,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({
-                thread_id: id,
-                title: newTitle,
-              }),
+              body: JSON.stringify({ title: newTitle }),
             });
-            if (!res.ok) {
-              console.error(`[renameThread] Backend rename returned status: ${res.status}`);
-            }
-          } catch (err) {
-            console.error('[renameThread] Failed to rename on backend:', err);
           }
-        }
 
-        set((state) => ({
+          if (res.status === 405 || res.status === 404) {
+            res = await fetch(`${formattedUrl}/chat/threads/${id}`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey.trim()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ title: newTitle }),
+            });
+          }
+
+          if (res.status === 405 || res.status === 404) {
+            res = await fetch(`${formattedUrl}/chat/threads/rename`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey.trim()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ thread_id: id, id, title: newTitle }),
+            });
+          }
+
+          if (!res.ok && res.status !== 404 && res.status !== 405) {
+            console.warn(`[renameThread] Backend rename returned status: ${res.status}`);
+          }
+        } catch (err) {
+          console.warn('[renameThread] Failed rename backend:', err);
+        }
+      }
+    set((state) => ({
           threads: state.threads.map((t) => t.id === id ? { ...t, title: newTitle } : t)
         }));
       },
