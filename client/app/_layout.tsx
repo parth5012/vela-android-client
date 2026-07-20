@@ -63,6 +63,8 @@ export default function RootLayout() {
 
   const currentUrl = useBrowserStore((s) => s.currentUrl);
   const isBrowserVisible = useBrowserStore((s) => s.isVisible);
+  const isBrowserRoute = segments[0] === 'browser';
+  const shouldShowWebview = isBrowserVisible && isBrowserRoute;
 
   return (
     <View style={{ flex: 1 }}>
@@ -127,9 +129,9 @@ export default function RootLayout() {
       <View
         style={[
           styles.persistentWebview,
-          { display: isBrowserVisible ? 'flex' : 'none' },
+          { display: shouldShowWebview ? 'flex' : 'none' },
         ]}
-        pointerEvents={isBrowserVisible ? 'auto' : 'none'}
+        pointerEvents={shouldShowWebview ? 'auto' : 'none'}
       >
         <WebView
           ref={webViewRef}
