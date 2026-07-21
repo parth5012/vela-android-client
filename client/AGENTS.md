@@ -53,8 +53,20 @@ npx expo prebuild --clean   # regenerate native dirs after config changes
 
 ## Knowledge graph
 
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked locally as Markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage states use standard role strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repository layout using `CONTEXT.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.
+
 `graphify-out/` contains a pre-built knowledge graph. Query it before reading files blindly:
 - God nodes: `useConfigStore` (11 edges), `useChatStore` (7 edges)
 - 4 screens, 8 communities, 117 nodes
-
-opencode -s ses_0820959d9ffeB1IjaDsiDXT6Je
