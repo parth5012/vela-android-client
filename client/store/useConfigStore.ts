@@ -142,11 +142,17 @@ export const useConfigStore = create<ConfigState>()(
       setSuggestionStarters: (suggestionStarters) => set({ suggestionStarters }),
     }),
     {
-      name: 'vela-config-storage',
-      storage: createJSONStorage(() => secureConfigStorage),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
+    name: 'vela-config-storage',
+    storage: createJSONStorage(() => secureConfigStorage),
+    onRehydrateStorage: (state) => {
+      return (hydratedState, error) => {
+        if (!error && hydratedState) {
+          hydratedState.setHasHydrated(true);
+        } else {
+          state?.setHasHydrated(true);
+        }
+      };
+    },
     }
   )
 );

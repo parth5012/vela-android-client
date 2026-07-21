@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     overflow: 'hidden',
     alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -157,6 +158,8 @@ const styles = StyleSheet.create({
   content: {
     borderTopWidth: 1,
     padding: 12,
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
 });
 

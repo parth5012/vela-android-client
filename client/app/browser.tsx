@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'; import { webViewRef } from '../store/useBrowserStore';
 import { useBrowserStore } from '../store/useBrowserStore';
 import { useConfigStore } from '../store/useConfigStore';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
@@ -44,18 +44,15 @@ export default function BrowserScreen() {
   }, [urlInput, navigate]);
 
   const handleBack = useCallback(() => {
-    const ref = require('../store/useBrowserStore').webViewRef;
-    ref.current?.goBack();
+    webViewRef.current?.goBack();
   }, []);
 
   const handleForward = useCallback(() => {
-    const ref = require('../store/useBrowserStore').webViewRef;
-    ref.current?.goForward();
+    webViewRef.current?.goForward();
   }, []);
 
   const handleRefresh = useCallback(() => {
-    const ref = require('../store/useBrowserStore').webViewRef;
-    ref.current?.reload();
+    webViewRef.current?.reload();
   }, []);
 
   const handleClose = useCallback(() => {

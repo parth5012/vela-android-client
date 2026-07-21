@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
+import { useRouter, useSegments, useRootNavigationState, Slot } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { ActivityIndicator, View, StyleSheet, Platform, Pressable, Text } from 'react-native';
 import { useConfigStore } from '../store/useConfigStore';
@@ -96,7 +96,6 @@ export default function RootLayout() {
 
   // If we are in the setup screen, render it directly without the Drawer UI
   if (inSetupGroup) {
-    const { Slot } = require('expo-router');
     return <Slot />;
   }
 
@@ -110,6 +109,7 @@ export default function RootLayout() {
       <Drawer
         drawerContent={() => <DrawerContent />}
         screenOptions={{
+          drawerType: 'front',
           headerStyle: {
             backgroundColor: '#09090b',
             shadowColor: 'transparent',

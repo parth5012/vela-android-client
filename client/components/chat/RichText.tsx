@@ -57,7 +57,7 @@ export default function RichText({
               <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 1, fontWeight: 'bold' }}>Copy</Text>
             </Pressable>
           </View>
-          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%', maxWidth: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
             <Text style={[styles.codeText, { color: colors.text, fontSize: sizes.text - 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
               {codeText.replace(/\n$/, '')}
             </Text>
@@ -80,7 +80,7 @@ export default function RichText({
               <Text style={{ color: colors.textMuted, fontSize: sizes.sub - 1, fontWeight: 'bold' }}>Copy</Text>
             </Pressable>
           </View>
-          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ width: '100%', maxWidth: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
             <Text style={[styles.codeText, { color: colors.text, fontSize: sizes.text - 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
               {codeText.replace(/\n$/, '')}
             </Text>
@@ -171,6 +171,38 @@ export default function RichText({
       marginVertical: 2,
       fontSize: sizes.text,
     },
+    paragraph: {
+      marginTop: 0,
+      marginBottom: 8,
+      flexWrap: 'wrap',
+    },
+    text: {
+      flexWrap: 'wrap',
+    },
+    table: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      marginVertical: 8,
+      overflow: 'hidden',
+    },
+    tableHeader: {
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+    },
+    tr: {
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+    },
+    td: {
+      padding: 6,
+    },
+    th: {
+      padding: 6,
+      fontWeight: 'bold' as const,
+    },
     strong: {
       fontWeight: 'bold' as const,
       color: colors.text,
@@ -184,7 +216,7 @@ export default function RichText({
     <View style={styles.container}>
       {segments.map((segment, index) => {
         if (segment.type === 'markdown') {
-          return <Markdown key={index} rules={rules} style={dynamicMarkdownStyles}>{segment.content}</Markdown>;
+          return <Markdown key={index} rules={rules} style={dynamicMarkdownStyles as any}>{segment.content}</Markdown>;
         } else if (segment.type === 'latex-inline') {
           return (
             <LatexRenderer
@@ -211,6 +243,8 @@ export default function RichText({
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'stretch',
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   codeBlockWrapper: {
     borderWidth: 1,
@@ -218,6 +252,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     overflow: 'hidden',
     alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   codeBlockHeader: {
     flexDirection: 'row',

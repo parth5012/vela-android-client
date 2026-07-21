@@ -285,7 +285,7 @@ export default function ChatScreen() {
     }
   }, [apiUrl, apiKey]);
 
-  const activeMessages = activeThreadId ? messages[activeThreadId] : [];
+  const activeMessages = (activeThreadId && messages[activeThreadId]) || [];
   const lastMsg = activeMessages[activeMessages.length - 1];
 
   // Webview browser tag parser - dispatches to browser store
@@ -583,8 +583,8 @@ export default function ChatScreen() {
           
           {/* Render thoughts uniquely above the main message bubble */}
           {/* Render thought and intent blocks uniquely above the main message bubble */}
-          {!isUser && headerSegments.length > 0 && (
-            <View style={{ maxWidth: '85%', width: '100%', marginBottom: 6 }}>
+      {!isUser && headerSegments.length > 0 && (
+        <View style={{ maxWidth: '92%', width: '100%', marginBottom: 6 }}>
               {headerSegments.map((segment, idx) => (
                 <CollapsibleBlock
                   key={`${segment.type}-${idx}`}
@@ -1182,6 +1182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginVertical: 8,
     alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   userRow: {
     justifyContent: 'flex-end',
@@ -1190,18 +1191,23 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   bubble: {
-    maxWidth: '85%',
+    maxWidth: '92%',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
+    overflow: 'hidden',
+    flexShrink: 1,
   },
   userBubble: {
+    maxWidth: '85%',
     backgroundColor: '#18181b',
     borderColor: '#27272a',
     borderTopRightRadius: 4,
   },
   assistantBubble: {
+    maxWidth: '92%',
+    width: '100%',
     backgroundColor: 'rgba(99, 102, 241, 0.05)',
     borderColor: 'rgba(99, 102, 241, 0.2)',
     borderTopLeftRadius: 4,
