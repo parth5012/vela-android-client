@@ -46,7 +46,6 @@ yarn-error.*
 credentials.json
 *.zip
 app-release/
-__tests__/
 .agents/
 credentials/
 .claude/
