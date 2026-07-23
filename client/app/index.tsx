@@ -518,7 +518,7 @@ export default function ChatScreen() {
   const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
     const isCompleted = item.content !== '' && (!isCurrentThreadStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
-    const showActionBar = item.role === 'assistant' && isCompleted;
+    const showActionBar = isCompleted;
 
     const activeThread = threads.find((t) => t.id === activeThreadId);
     const threadPersonaId = activeThread?.persona || 'personal assistant';
@@ -1106,6 +1106,7 @@ export default function ChatScreen() {
         onCopyCodeBlocks={() => activeMenuMessage && handleCopyCodeBlocks(activeMenuMessage.content)}
         onShowInfo={() => activeMenuMessage && handleShowInfo(activeMenuMessage)}
         isRaw={activeMenuMessage ? !!showRawMap[activeMenuMessage.id] : false}
+        isUser={activeMenuMessage ? activeMenuMessage.role === 'user' : false}
       />
     </KeyboardAvoidingView>
   );

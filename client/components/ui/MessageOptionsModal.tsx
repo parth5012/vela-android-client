@@ -18,6 +18,7 @@ interface MessageOptionsModalProps {
   onCopyCodeBlocks: () => void;
   onShowInfo: () => void;
   isRaw: boolean;
+  isUser?: boolean;
 }
 
 export default function MessageOptionsModal({
@@ -30,6 +31,7 @@ export default function MessageOptionsModal({
   onCopyCodeBlocks,
   onShowInfo,
   isRaw,
+  isUser,
 }: MessageOptionsModalProps) {
   return (
     <Modal
@@ -54,7 +56,8 @@ export default function MessageOptionsModal({
             <Text style={styles.optionButtonText}>Download as MD</Text>
           </Pressable>
 
-          <Pressable
+          {!isUser && (
+<Pressable
             style={({ pressed }) => [
               styles.optionButton,
               pressed && styles.optionButtonPressed,
@@ -64,8 +67,10 @@ export default function MessageOptionsModal({
             <Text style={styles.optionIcon}>🔄</Text>
             <Text style={styles.optionButtonText}>Regenerate Response</Text>
           </Pressable>
+          )}
 
-          <Pressable
+          {!isUser && (
+<Pressable
             style={({ pressed }) => [
               styles.optionButton,
               pressed && styles.optionButtonPressed,
@@ -77,6 +82,7 @@ export default function MessageOptionsModal({
               {isRaw ? 'Show Rendered Markdown' : 'Show Raw Markdown'}
             </Text>
           </Pressable>
+          )}
 
           <Pressable
             style={({ pressed }) => [
@@ -100,7 +106,8 @@ export default function MessageOptionsModal({
             <Text style={styles.optionButtonText}>Copy Code Blocks Only</Text>
           </Pressable>
 
-          <Pressable
+          {!isUser && (
+<Pressable
             style={({ pressed }) => [
               styles.optionButton,
               pressed && styles.optionButtonPressed,
@@ -110,6 +117,7 @@ export default function MessageOptionsModal({
             <Text style={styles.optionIcon}>ℹ️</Text>
             <Text style={styles.optionButtonText}>Response Info</Text>
           </Pressable>
+          )}
 
           <Pressable
             style={({ pressed }) => [
