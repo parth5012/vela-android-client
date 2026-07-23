@@ -28,6 +28,7 @@ export default function DrawerContent() {
   const activeThreadId = useChatStore((state) => state.activeThreadId);
   const createThread = useChatStore((state) => state.createThread);
   const selectThread = useChatStore((state) => state.selectThread);
+  const streamingThreadIds = useChatStore((state) => state.streamingThreadIds);
   const { apiUrl, apiKey, theme, fontSize, accentColor, defaultPersona } = useConfigStore();
   const router = useRouter();
   const navigation = useNavigation<any>();
@@ -166,6 +167,9 @@ export default function DrawerContent() {
                 >
                   {thread.is_pinned ? '📌 ' : ''}{thread.title}
                 </Text>
+            {streamingThreadIds && streamingThreadIds.has(thread.id) && (
+              <ActivityIndicator size="small" color={accentHex} style={{ marginLeft: 6 }} />
+            )}
               </Pressable>
             );
           })

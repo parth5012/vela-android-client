@@ -119,17 +119,18 @@ export default function ChatScreen() {
     threads,
     activeThreadId,
     messages,
-    isStreaming,
+    isThreadStreaming,
     createThread,
     addMessage,
     appendToken,
     setThreads,
-    setStreaming,
+    setStreamingThread,
     truncateThreadHistory,
     branchThread,
     setThreadPersona,
     setHistory,
   } = useChatStore();
+  const isCurrentThreadStreaming = isThreadStreaming(activeThreadId || '');
 
   const [input, setInput] = useState('');
   const [activeMenuMessage, setActiveMenuMessage] = useState<Message | null>(null);
@@ -147,24 +148,23 @@ export default function ChatScreen() {
   const [welcomeGreeting, setWelcomeGreeting] = useState('Hello');
   const [selectedPersona, setSelectedPersona] = useState(defaultPersona || 'personal assistant');
 
-  const pendingTokensRef = React.useRef('');
-  const throttleTimerRef = React.useRef<any>(null);
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-  const streamingThreadIdRef = React.useRef<string | null>(null);
+  const pendingTokensMapRef = React.useRef<Record<string, string>>({});
+  const throttleTimersRef = React.useRef<Record<string, any>>({});
+  const abortControllersRef = React.useRef<Record<string, AbortController>>({});
 
   const cleanUpThrottleAndHeal = useCallback((threadId: string) => {
-    if (throttleTimerRef.current) {
-      clearInterval(throttleTimerRef.current);
-      throttleTimerRef.current = null;
-    }
-    
-    // Flush any leftover tokens
-    if (pendingTokensRef.current) {
-      appendToken(threadId, pendingTokensRef.current);
-      pendingTokensRef.current = '';
+    if (throttleTimersRef.current[threadId]) {
+      clearInterval(throttleTimersRef.current[threadId]);
+      delete throttleTimersRef.current[threadId];
     }
 
-    // Heal XML tags for the last assistant message
+    // Flush any leftover tokens
+    if (pendingTokensMapRef.current[threadId]) {
+      appendToken(threadId, pendingTokensMapRef.current[threadId]);
+      delete pendingTokensMapRef.current[threadId];
+    }
+
+    // Heal XML tags in last assistant message
     const threadMsgs = useChatStore.getState().messages[threadId] || [];
     if (threadMsgs.length > 0) {
       const last = threadMsgs[threadMsgs.length - 1];
@@ -229,35 +229,19 @@ export default function ChatScreen() {
       setWelcomeGreeting("Good evening");
     }
 
-    setStreaming(false);
+    setStreamingThread(activeThreadId || '', false);
   }, []);
 
   React.useEffect(() => {
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (throttleTimerRef.current) {
-        clearInterval(throttleTimerRef.current);
-      }
+      Object.values(abortControllersRef.current).forEach((controller) => {
+        controller.abort();
+      });
+      Object.values(throttleTimersRef.current).forEach((timer) => {
+        clearInterval(timer);
+      });
     };
   }, []);
-
-  React.useEffect(() => {
-    if (streamingThreadIdRef.current !== activeThreadId) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      if (throttleTimerRef.current) {
-        clearInterval(throttleTimerRef.current);
-        throttleTimerRef.current = null;
-      }
-      pendingTokensRef.current = '';
-      streamingThreadIdRef.current = null;
-      setStreaming(false);
-    }
-  }, [activeThreadId]);
 
   React.useEffect(() => {
     if (apiUrl && apiKey) {
@@ -351,7 +335,7 @@ export default function ChatScreen() {
   }, []);
 
   const handleRegenerate = useCallback(async (message: Message) => {
-    if (isStreaming || !activeThreadId) return;
+    if (isCurrentThreadStreaming || !activeThreadId) return;
 
     const threadMsgs = messages[activeThreadId] || [];
     const index = threadMsgs.findIndex((m) => m.id === message.id);
@@ -371,7 +355,7 @@ export default function ChatScreen() {
       return;
     }
 
-    // Truncate thread history up to the assistant message
+    // Truncate thread history up to this assistant message
     await truncateThreadHistory(activeThreadId, message.id);
 
     // Add empty message for streaming
@@ -382,13 +366,10 @@ export default function ChatScreen() {
       content: '',
     });
 
-    setStreaming(true);
+    setStreamingThread(activeThreadId, true);
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    streamingThreadIdRef.current = activeThreadId;
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllersRef.current[activeThreadId] = controller;
 
     // Call SSE API again
     await streamAgentResponse(
@@ -397,20 +378,19 @@ export default function ChatScreen() {
       activeThreadId,
       userPrompt,
       (chunk) => {
-        pendingTokensRef.current += chunk;
-        if (!throttleTimerRef.current) {
-          throttleTimerRef.current = setInterval(() => {
-            if (pendingTokensRef.current) {
-              appendToken(activeThreadId, pendingTokensRef.current);
-              pendingTokensRef.current = '';
+        pendingTokensMapRef.current[activeThreadId] = (pendingTokensMapRef.current[activeThreadId] || '') + chunk;
+        if (!throttleTimersRef.current[activeThreadId]) {
+          throttleTimersRef.current[activeThreadId] = setInterval(() => {
+            if (pendingTokensMapRef.current[activeThreadId]) {
+              appendToken(activeThreadId, pendingTokensMapRef.current[activeThreadId]);
+              pendingTokensMapRef.current[activeThreadId] = '';
             }
           }, 100);
         }
       },
       (newTitle) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(activeThreadId, false);
+        delete abortControllersRef.current[activeThreadId];
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           const updatedThreads = threads.map((t) =>
@@ -420,17 +400,19 @@ export default function ChatScreen() {
         }
       },
       (error) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(activeThreadId, false);
+        delete abortControllersRef.current[activeThreadId];
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
-        appendToken(activeThreadId, `\n\n⚠️ **Error:** ${errMsg}`);
+        appendToken(
+          activeThreadId,
+          `\n\n⚠️ **Error:** ${errMsg}`
+        );
       },
-      abortControllerRef.current.signal
+      controller.signal
     );
   }, [
-    isStreaming,
+    isCurrentThreadStreaming,
     activeThreadId,
     messages,
     apiUrl,
@@ -438,18 +420,30 @@ export default function ChatScreen() {
     threads,
     truncateThreadHistory,
     addMessage,
-    setStreaming,
+    setStreamingThread,
     appendToken,
     setThreads,
     cleanUpThrottleAndHeal,
   ]);
 
   const handleBranch = useCallback(async (message: Message) => {
-    if (!activeThreadId) return;
+    if (isCurrentThreadStreaming || !activeThreadId) return;
+    const threadMsgs = messages[activeThreadId] || [];
+    const index = threadMsgs.findIndex((m) => m.id === message.id);
+    if (index === -1) return;
+    
     const newThreadId = generateUUID();
-    await branchThread(activeThreadId, message.id, newThreadId, 'Branched Conversation');
-    Alert.alert('Success', 'Branched to a new conversation.');
-  }, [activeThreadId, branchThread]);
+    const parentThread = threads.find((t) => t.id === activeThreadId);
+    const title = `Branch of ${parentThread?.title || 'Chat'}`;
+    
+    await branchThread(activeThreadId, message.id, newThreadId, title);
+  }, [
+    activeThreadId,
+    messages,
+    isCurrentThreadStreaming,
+    branchThread,
+    threads
+  ]);
 
   const handleCopyCodeBlocks = useCallback(async (text: string) => {
     const codeBlockRegex = /```[\s\S]*?```/g;
@@ -523,7 +517,7 @@ export default function ChatScreen() {
 
   const renderItem = useCallback(({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
-    const isCompleted = item.content !== '' && (!isStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
+    const isCompleted = item.content !== '' && (!isCurrentThreadStreaming || activeMessages[activeMessages.length - 1]?.id !== item.id);
     const showActionBar = item.role === 'assistant' && isCompleted;
 
     const activeThread = threads.find((t) => t.id === activeThreadId);
@@ -627,7 +621,7 @@ export default function ChatScreen() {
                   {item.content}
                 </Text>
               </ScrollView>
-            ) : item.content === '' && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
+            ) : item.content === '' && isCurrentThreadStreaming && activeMessages[activeMessages.length - 1]?.id === item.id ? (
               <ActivityIndicator size="small" color={accentHex} style={styles.loader} />
             ) : isUser ? (
               <RichText 
@@ -698,7 +692,7 @@ export default function ChatScreen() {
               </View>
             )}
 
-            {!isUser && isStreaming && activeMessages[activeMessages.length - 1]?.id === item.id && (
+            {!isUser && isCurrentThreadStreaming && activeMessages[activeMessages.length - 1]?.id === item.id && (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 4 }}>
                 <View style={[styles.typingDot, { backgroundColor: accentHex }]} />
                 <View style={[styles.typingDot, { backgroundColor: accentHex, opacity: 0.6 }]} />
@@ -734,7 +728,7 @@ export default function ChatScreen() {
       </View>
     );
   }, [
-    isStreaming,
+    isCurrentThreadStreaming,
     activeMessages,
     colors,
     sizes,
@@ -761,13 +755,13 @@ export default function ChatScreen() {
     }
     Keyboard.dismiss();
 
-    if (isStreaming) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+    if (isCurrentThreadStreaming) {
+      if (abortControllersRef.current[activeThreadId]) {
+        abortControllersRef.current[activeThreadId].abort();
+        delete abortControllersRef.current[activeThreadId];
       }
       cleanUpThrottleAndHeal(activeThreadId);
-      setStreaming(false);
+      setStreamingThread(activeThreadId, false);
     }
 
     const userText = input.trim();
@@ -788,13 +782,13 @@ export default function ChatScreen() {
       content: '',
     });
 
-    setStreaming(true);
+    setStreamingThread(activeThreadId, true);
 
     const activeThread = threads.find((t) => t.id === activeThreadId);
     const selectedPersona = activeThread?.persona || 'personal assistant';
 
-    streamingThreadIdRef.current = activeThreadId;
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllersRef.current[activeThreadId] = controller;
 
     // 3. Connect to backend stream
     await streamAgentResponse(
@@ -803,20 +797,19 @@ export default function ChatScreen() {
       activeThreadId,
       userText,
       (chunk) => {
-        pendingTokensRef.current += chunk;
-        if (!throttleTimerRef.current) {
-          throttleTimerRef.current = setInterval(() => {
-            if (pendingTokensRef.current) {
-              appendToken(activeThreadId, pendingTokensRef.current);
-              pendingTokensRef.current = '';
+        pendingTokensMapRef.current[activeThreadId] = (pendingTokensMapRef.current[activeThreadId] || '') + chunk;
+        if (!throttleTimersRef.current[activeThreadId]) {
+          throttleTimersRef.current[activeThreadId] = setInterval(() => {
+            if (pendingTokensMapRef.current[activeThreadId]) {
+              appendToken(activeThreadId, pendingTokensMapRef.current[activeThreadId]);
+              pendingTokensMapRef.current[activeThreadId] = '';
             }
           }, 100);
         }
       },
       (newTitle) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(activeThreadId, false);
+        delete abortControllersRef.current[activeThreadId];
         cleanUpThrottleAndHeal(activeThreadId);
         if (newTitle) {
           // Update thread title
@@ -827,9 +820,8 @@ export default function ChatScreen() {
         }
       },
       (error) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(activeThreadId, false);
+        delete abortControllersRef.current[activeThreadId];
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
@@ -837,30 +829,19 @@ export default function ChatScreen() {
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
-      abortControllerRef.current.signal,
+      controller.signal,
       selectedPersona
     );
   };
 
 
-  const handleSendWelcome = async (textToSend: string, personaId?: string) => {
+  const handleSendWelcome = useCallback(async (textToSend: string, personaId?: string) => {
     if (!textToSend.trim()) return;
     if (!apiUrl || !apiKey) {
       Alert.alert('Configuration Required', 'Please configure your API URL and Key in Settings.');
       return;
     }
     Keyboard.dismiss();
-
-    if (isStreaming) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      if (activeThreadId) {
-        cleanUpThrottleAndHeal(activeThreadId);
-      }
-      setStreaming(false);
-    }
 
     const newThreadId = generateUUID();
     const persona = personaId || selectedPersona;
@@ -883,10 +864,10 @@ export default function ChatScreen() {
       content: '',
     });
 
-    setStreaming(true);
+    setStreamingThread(newThreadId, true);
 
-    streamingThreadIdRef.current = newThreadId;
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllersRef.current[newThreadId] = controller;
 
     // 4. Stream response
     await streamAgentResponse(
@@ -895,29 +876,27 @@ export default function ChatScreen() {
       newThreadId,
       textToSend.trim(),
       (chunk) => {
-        pendingTokensRef.current += chunk;
-        if (!throttleTimerRef.current) {
-          throttleTimerRef.current = setInterval(() => {
-            if (pendingTokensRef.current) {
-              appendToken(newThreadId, pendingTokensRef.current);
-              pendingTokensRef.current = '';
+        pendingTokensMapRef.current[newThreadId] = (pendingTokensMapRef.current[newThreadId] || '') + chunk;
+        if (!throttleTimersRef.current[newThreadId]) {
+          throttleTimersRef.current[newThreadId] = setInterval(() => {
+            if (pendingTokensMapRef.current[newThreadId]) {
+              appendToken(newThreadId, pendingTokensMapRef.current[newThreadId]);
+              pendingTokensMapRef.current[newThreadId] = '';
             }
           }, 100);
         }
       },
       (newTitle) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(newThreadId, false);
+        delete abortControllersRef.current[newThreadId];
         cleanUpThrottleAndHeal(newThreadId);
         if (newTitle) {
           useChatStore.getState().renameThread(newThreadId, newTitle);
         }
       },
       (error) => {
-        setStreaming(false);
-        streamingThreadIdRef.current = null;
-        abortControllerRef.current = null;
+        setStreamingThread(newThreadId, false);
+        delete abortControllersRef.current[newThreadId];
         cleanUpThrottleAndHeal(newThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
         appendToken(
@@ -925,10 +904,19 @@ export default function ChatScreen() {
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
-      abortControllerRef.current.signal,
+      controller.signal,
       persona
     );
-  };
+  }, [
+    apiUrl,
+    apiKey,
+    selectedPersona,
+    createThread,
+    addMessage,
+    appendToken,
+    setStreamingThread,
+    cleanUpThrottleAndHeal,
+  ]);
 
   const handleSendPress = () => {
     if (activeThreadId) {
@@ -962,7 +950,7 @@ export default function ChatScreen() {
                         isSelected && { backgroundColor: accentHex, borderColor: accentHex }
                       ]}
                       onPress={() => activeThreadId && setThreadPersona(activeThreadId, p.id)}
-                      disabled={isStreaming}
+                      disabled={isCurrentThreadStreaming}
                     >
                       <Text style={[
                         styles.personaPillText, 

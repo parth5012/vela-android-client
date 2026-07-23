@@ -30,7 +30,7 @@ interface ChatState {
   threads: Thread[];
   activeThreadId: string | null;
   messages: Record<string, Message[]>;
-  isStreaming: boolean;
+  streamingThreadIds: Set<string>;
   createThread: (title: string, id: string, persona?: string) => void;
   selectThread: (id: string | null) => void;
   deleteThread: (id: string) => void;
@@ -41,7 +41,8 @@ interface ChatState {
   appendToken: (threadId: string, token: string) => void;
   setThreads: (threads: Thread[]) => void;
   setHistory: (threadId: string, history: Message[]) => void;
-  setStreaming: (streaming: boolean) => void;
+  setStreamingThread: (threadId: string, isStreaming: boolean) => void;
+  isThreadStreaming: (threadId: string) => boolean;
   clearStore: () => void;
   branchThread: (parentThreadId: string, uptoMessageId: string, newThreadId: string, title: string) => Promise<void>;
   truncateThreadHistory: (threadId: string, uptoMessageId: string) => Promise<void>;
@@ -49,11 +50,11 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       threads: [],
       activeThreadId: null,
       messages: {},
-      isStreaming: false,
+      streamingThreadIds: new Set(),
       createThread: (title, id, persona = 'personal assistant') => set((state) => ({
         threads: [{ id, title, persona, updated_at: new Date().toISOString() }, ...state.threads],
         activeThreadId: id,
@@ -185,8 +186,17 @@ export const useChatStore = create<ChatState>()(
       setHistory: (threadId, history) => set((state) => ({
         messages: { ...state.messages, [threadId]: history }
       })),
-      setStreaming: (isStreaming) => set({ isStreaming }),
-      clearStore: () => set({ threads: [], activeThreadId: null, messages: {}, isStreaming: false }),
+      setStreamingThread: (threadId, isStreaming) => set((state) => {
+        const next = new Set(state.streamingThreadIds);
+        if (isStreaming) {
+          next.add(threadId);
+        } else {
+          next.delete(threadId);
+        }
+        return { streamingThreadIds: next };
+      }),
+      isThreadStreaming: (threadId) => get().streamingThreadIds.has(threadId),
+      clearStore: () => set({ threads: [], activeThreadId: null, messages: {}, streamingThreadIds: new Set() }),
       branchThread: async (parentThreadId, uptoMessageId, newThreadId, title) => {
         const config = useConfigStore.getState();
         if (config.apiUrl && config.apiKey) {

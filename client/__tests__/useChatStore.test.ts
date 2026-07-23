@@ -87,8 +87,8 @@ describe('useChatStore', () => {
     const store = useChatStore.getState();
     store.createThread('Thread 1', 'test-uuid-3');
 
-    store.setStreaming(true);
-    expect(useChatStore.getState().isStreaming).toBe(true);
+    store.setStreamingThread('test-uuid-3', true);
+    expect(useChatStore.getState().isThreadStreaming('test-uuid-3')).toBe(true);
 
     const history = [
       { id: 'msg1', role: 'user' as const, content: 'hello' },
