@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,8 @@ import {
   Image,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { useGoogleAuthStore, GoogleTokenSet } from '../../store/useGoogleAuthStore';
+import { useGoogleAuthStore } from '../../store/useGoogleAuthStore';
 import { useConfigStore } from '../../store/useConfigStore';
-import { useChatStore } from '../../store/useChatStore';
-
-// Complete auth session on web (required by expo-auth-session)
-WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleWorkspaceCardProps {
   colors: {
@@ -41,101 +36,8 @@ function apiUrl(path: string, base: string): string {
   return `${formatted}${path}`;
 }
 
-// Fetch user profile from Google using the access token
-async function fetchGoogleUser(
-  accessToken: string
-): Promise<{ name: string; email: string; picture?: string; sub?: string } | null> {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) {
-      console.warn('[GoogleWorkspace] Failed to fetch user info:', res.status);
-      return null;
-    }
-    const data = await res.json();
-    return {
-      name: data.name || data.email || 'Google User',
-      email: data.email || '',
-      picture: data.picture || undefined,
-      sub: data.sub || undefined,
-    };
-  } catch (err) {
-    console.error('[GoogleWorkspace] Error fetching user info:', err);
-    return null;
-  }
-}
-
-// Get a conversation ID for token storage — uses active thread or a fallback
-function getConversationId(): string {
-  const activeId = useChatStore.getState().activeThreadId;
-  if (activeId) return activeId;
-  return 'vela-google-workspace-auth';
-}
-
-// ─── Inner component that uses the Google hook ──────────────────────────
-// Only rendered when client IDs are configured, so the hook never throws.
-function GoogleAuthButton({
-  colors,
-  sizes,
-  accentHex,
-  onSignInStart,
-  onSignInEnd,
-}: {
-  colors: any;
-  sizes: any;
-  accentHex: string;
-  onSignInStart: () => void;
-  onSignInEnd: (tokenSet: GoogleTokenSet | null, error: string | null) => void;
-}) {
-  const { iosClientId, androidClientId, webClientId, scopes } = useGoogleAuthStore();
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: iosClientId || undefined,
-    androidClientId: androidClientId || undefined,
-    webClientId: webClientId || undefined,
-    scopes: scopes as string[],
-  });
-
-  // Handle OAuth response
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      const { params } = response;
-      const tokenSet: GoogleTokenSet = {
-        accessToken: params.access_token || params.id_token || '',
-        refreshToken: params.refresh_token || undefined,
-        idToken: params.id_token || undefined,
-        expiresAt: params.expires_in
-          ? Date.now() + Number(params.expires_in) * 1000
-          : Date.now() + 3600_000,
-      };
-      onSignInEnd(tokenSet, tokenSet.accessToken ? null : 'No access token received from Google.');
-    } else if (response.type === 'error') {
-      onSignInEnd(null, response.params?.error_description || 'Google sign-in failed.');
-    }
-  }, [response]);
-
-  const handlePress = () => {
-    onSignInStart();
-    promptAsync().catch((err: any) => {
-      onSignInEnd(null, err.message || 'Failed to start Google sign-in.');
-    });
-  };
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.signInButton,
-        { backgroundColor: accentHex },
-        pressed && { opacity: 0.8 },
-      ]}
-      onPress={handlePress}
-    >
-      <Text style={[styles.signInButtonText, { fontSize: sizes.text }]}>Sign in with Google</Text>
-    </Pressable>
-  );
-}
+// The redirect URI the backend will send us back to after OAuth completes
+const OAUTH_REDIRECT_URI = 'vela-client://oauth/callback';
 
 // ─── Main component ─────────────────────────────────────────────────────
 
@@ -149,108 +51,126 @@ export default function GoogleWorkspaceCard({
     isSigningIn,
     user,
     error,
-    iosClientId,
-    androidClientId,
-    webClientId,
+    backendConnected,
     setTokens,
     setUser,
     setSigningIn,
     setError,
+    setBackendConnected,
     clearAuth,
   } = useGoogleAuthStore();
 
   const apiUrlRaw = useConfigStore((s) => s.apiUrl);
   const apiKey = useConfigStore((s) => s.apiKey);
-  const tokensSentRef = useRef(false);
-  const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
-
-  const hasClientIds = !!(iosClientId || androidClientId || webClientId);
+  const sessionStartedRef = useRef(false);
 
   // On mount, check backend for existing token status
   useEffect(() => {
     if (!apiUrlRaw || !apiKey) return;
-    const convId = getConversationId();
-    fetch(
-      apiUrl(`/oauth/token/status?conversation_id=${encodeURIComponent(convId)}`, apiUrlRaw),
-      { headers: { Authorization: `Bearer ${apiKey.trim()}` } }
-    )
-      .then((r) => r.json())
-      .then((data) => setBackendConnected(data.connected === true))
-      .catch(() => setBackendConnected(false));
+    checkTokenStatus();
   }, [apiUrlRaw, apiKey]);
 
-  // Send Google tokens to the Vela backend via /oauth/token
-  const sendTokensToBackend = useCallback(async () => {
+  const checkTokenStatus = useCallback(async () => {
     if (!apiUrlRaw || !apiKey) return;
-    const token = useGoogleAuthStore.getState()._accessToken;
-    const refreshToken = useGoogleAuthStore.getState()._refreshToken;
-    const expiry = useGoogleAuthStore.getState()._tokenExpiresAt;
-    if (!token) return;
-
     try {
-      const res = await fetch(apiUrl('/oauth/token', apiUrlRaw), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          conversation_id: getConversationId(),
-          access_token: token,
-          refresh_token: refreshToken || '',
-          expiry: expiry ? new Date(expiry).toISOString() : '',
-          scopes: useGoogleAuthStore.getState().scopes,
-        }),
-      });
-      if (!res.ok) {
-        console.warn('[GoogleWorkspace] Backend rejected tokens, status:', res.status);
+      const res = await fetch(
+        apiUrl(`/oauth/token/status`, apiUrlRaw),
+        { headers: { Authorization: `Bearer ${apiKey.trim()}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setBackendConnected(data.connected === true);
+        // If backend reports connected but we don't have local user, fetch it
+        if (data.connected && data.user) {
+          const currentUser = useGoogleAuthStore.getState().user;
+          if (!currentUser) {
+            setUser({
+              name: data.user.name || 'Google User',
+              email: data.user.email || '',
+              picture: data.user.picture || undefined,
+            });
+            // Also set any tokens returned by backend for SSE streaming
+            if (data.access_token) {
+              setTokens({
+                accessToken: data.access_token,
+                refreshToken: data.refresh_token,
+                idToken: data.id_token,
+                expiresAt: data.expires_at ? new Date(data.expires_at).getTime() : 0,
+              });
+            }
+          }
+        }
       } else {
-        setBackendConnected(true);
+        setBackendConnected(false);
       }
-    } catch (err) {
-      console.warn('[GoogleWorkspace] Failed to send tokens to backend:', err);
-      throw err;
+    } catch {
+      setBackendConnected(false);
     }
-  }, [apiUrlRaw, apiKey]);
+  }, [apiUrlRaw, apiKey, setBackendConnected, setUser, setTokens]);
 
-  // Auto-send tokens to backend when they become available
+  // After OAuth redirect returns, poll backend to confirm connection
   useEffect(() => {
-    if (!isConnected || !apiUrlRaw || !apiKey || tokensSentRef.current) return;
-    tokensSentRef.current = true;
-    sendTokensToBackend().catch(() => {
-      tokensSentRef.current = false;
-    });
-  }, [isConnected, apiUrlRaw, apiKey, sendTokensToBackend]);
+    if (!sessionStartedRef.current) return;
+    // Poll a few times after the OAuth browser closes
+    const timer = setInterval(() => {
+      checkTokenStatus().then(() => {
+        const state = useGoogleAuthStore.getState();
+        if (state.isConnected && state.backendConnected) {
+          clearInterval(timer);
+        }
+      });
+    }, 1500);
+    // Stop polling after 30 seconds
+    setTimeout(() => clearInterval(timer), 30_000);
+    return () => clearInterval(timer);
+  }, [checkTokenStatus]);
 
-  // Sign-in handlers
-  const handleSignInStart = () => {
+  // Sign-in: open backend-managed OAuth flow in browser
+  const handleSignIn = async () => {
+    if (!apiUrlRaw) {
+      setError('Server URL is not configured. Please configure your Vela node first.');
+      return;
+    }
+
     setSigningIn(true);
     setError(null);
-  };
 
-  const handleSignInEnd = async (tokenSet: GoogleTokenSet | null, err: string | null) => {
-    setSigningIn(false);
-    if (err) {
-      setError(err);
-      return;
-    }
-    if (!tokenSet || !tokenSet.accessToken) {
-      setError('No access token received from Google.');
-      return;
-    }
-    setTokens(tokenSet);
-    tokensSentRef.current = false;
+    try {
+      const authUrl = apiUrl(
+        `/oauth/google/authorize?redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}`,
+        apiUrlRaw
+      );
 
-    // Fetch user profile
-    const profile = await fetchGoogleUser(tokenSet.accessToken);
-    if (profile) setUser(profile);
+      // Note: we still need the API key for the backend to associate the OAuth
+      // state with this user. The backend reads it from the Authorization header.
+      // We pass it as a query param since WebBrowser can't set custom headers.
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${authUrl}&api_key=${encodeURIComponent(apiKey || '')}`,
+        OAUTH_REDIRECT_URI
+      );
+
+      if (result.type === 'success') {
+        // The backend successfully completed the OAuth flow and redirected back.
+        // Poll the token status endpoint to get user info and confirm.
+        sessionStartedRef.current = true;
+        await checkTokenStatus();
+      } else if (result.type === 'cancel') {
+        setError('Google sign-in was cancelled.');
+      } else if (result.type === 'dismiss') {
+        setError('Google sign-in was dismissed.');
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'An error occurred during Google sign-in.';
+      setError(msg);
+    } finally {
+      setSigningIn(false);
+    }
   };
 
   // Sign-out handler
   const handleSignOut = async () => {
     clearAuth();
-    tokensSentRef.current = false;
-    setBackendConnected(false);
+    sessionStartedRef.current = false;
 
     if (apiUrlRaw && apiKey) {
       try {
@@ -260,7 +180,6 @@ export default function GoogleWorkspaceCard({
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey.trim()}`,
           },
-          body: JSON.stringify({ conversation_id: getConversationId() }),
         });
       } catch {
         // Ignore network errors on revoke
@@ -313,7 +232,7 @@ export default function GoogleWorkspaceCard({
 
         <View style={[styles.agentNote, { backgroundColor: accentHex + '12', borderColor: accentHex + '30' }]}>
           <Text style={[styles.agentNoteText, { color: colors.textMuted, fontSize: sizes.sub - 1 }]}>
-            🤖 The Vela agent can access your Google Workspace (Gmail, Calendar, Drive) through backend-stored tokens.
+            The Vela agent can access your Google Workspace (Gmail, Calendar, Drive) through backend-stored tokens.
           </Text>
         </View>
 
@@ -341,46 +260,47 @@ export default function GoogleWorkspaceCard({
         <Text style={[styles.cardBadge, { fontSize: sizes.sub }]}>Optional</Text>
       </View>
       <Text style={[styles.cardSubtitle, { color: colors.textMuted, fontSize: sizes.sub }]}>
-        Sign in with Google to give your Vela agent access to Gmail, Calendar, and Drive.
+        Sign in with Google to give your Vela agent access to Gmail, Calendar, and Drive. The OAuth flow is handled by your Vela backend.
       </Text>
 
       {error ? (
         <Text style={[styles.errorText, { color: '#ef4444', fontSize: sizes.sub }]}>{error}</Text>
       ) : null}
 
-      {/* Only mount the Google hook when client IDs are configured */}
-      {hasClientIds ? (
-        <GoogleAuthButton
-          colors={colors}
-          sizes={sizes}
-          accentHex={accentHex}
-          onSignInStart={handleSignInStart}
-          onSignInEnd={handleSignInEnd}
-        />
+      {isSigningIn ? (
+        <View style={[styles.signInButton, { backgroundColor: accentHex }]}>
+          <ActivityIndicator color="#ffffff" size="small" />
+        </View>
       ) : (
         <Pressable
-          style={[styles.signInButton, { backgroundColor: accentHex, opacity: 0.5 }]}
-          disabled
+          style={({ pressed }) => [
+            styles.signInButton,
+            { backgroundColor: accentHex },
+            pressed && { opacity: 0.8 },
+            !apiUrlRaw && styles.buttonDisabled,
+          ]}
+          onPress={handleSignIn}
+          disabled={!apiUrlRaw}
         >
           <Text style={[styles.signInButtonText, { fontSize: sizes.text }]}>
-            Set Client ID below first
+            {apiUrlRaw ? 'Sign in with Google' : 'Configure Server URL first'}
           </Text>
         </Pressable>
       )}
 
-      {/* Scopes preview (matching backend SCOPES) */}
+      {/* Scopes preview (matching backend scopes) */}
       <View style={styles.scopesPreview}>
         <Text style={[styles.scopesLabel, { color: colors.textDark, fontSize: sizes.sub - 1 }]}>
           Agent will be able to:
         </Text>
         <Text style={[styles.scopeItem, { color: colors.textMuted, fontSize: sizes.sub - 1 }]}>
-          • Send Gmail
+          • Read Gmail messages
         </Text>
         <Text style={[styles.scopeItem, { color: colors.textMuted, fontSize: sizes.sub - 1 }]}>
           • Manage Calendar events
         </Text>
         <Text style={[styles.scopeItem, { color: colors.textMuted, fontSize: sizes.sub - 1 }]}>
-          • Upload to Drive
+          • View Drive files
         </Text>
       </View>
     </View>

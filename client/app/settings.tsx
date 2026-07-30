@@ -16,7 +16,6 @@ import { useChatStore } from '../store/useChatStore';
 import { syncHistoryWithBackend } from '../utils/history';
 import { THEME_COLORS, FONT_SIZES, ACCENT_COLORS } from '../utils/theme';
 import GoogleWorkspaceCard from '../components/ui/GoogleWorkspaceCard';
-import { useGoogleAuthStore } from '../store/useGoogleAuthStore';
 
 const PRESET_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'claude-3-5-sonnet', 'gpt-4o'];
 
@@ -49,17 +48,6 @@ export default function SettingsScreen() {
   const [newStarterLabel, setNewStarterLabel] = useState('');
   const [newStarterText, setNewStarterText] = useState('');
   const [newStarterPersona, setNewStarterPersona] = useState('personal assistant');
-
-  // Google Workspace state
-  const {
-    iosClientId: storedIosClientId,
-    androidClientId: storedAndroidClientId,
-    webClientId: storedWebClientId,
-    setClientIds: setGoogleClientIds,
-  } = useGoogleAuthStore();
-  const [iosClientId, setIosClientId] = useState(storedIosClientId);
-  const [androidClientId, setAndroidClientId] = useState(storedAndroidClientId);
-  const [webClientId, setWebClientId] = useState(storedWebClientId);
 
   const { clearStore } = useChatStore();
   const router = useRouter();
@@ -606,69 +594,6 @@ export default function SettingsScreen() {
           sizes={sizes}
           accentHex={accentHex}
         />
-
-        {/* OAuth Client ID Configuration */}
-        <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border, padding: 16 }]}>
-          <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub, marginBottom: 10 }]}>
-            Google Cloud OAuth Client IDs
-          </Text>
-          <Text style={{ color: colors.textDark, fontSize: sizes.sub - 1, marginBottom: 12, lineHeight: 16 }}>
-            Create OAuth 2.0 credentials in your Google Cloud Console and paste the client IDs below.
-            The redirect URI is: <Text style={{ color: accentHex, fontWeight: '600' }}>vela-client://</Text>
-          </Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>iOS Client ID</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text - 1, height: 36, paddingVertical: 6 }]}
-              placeholder="e.g. 123456-xxxx.apps.googleusercontent.com"
-              placeholderTextColor={colors.textDark}
-              value={iosClientId}
-              onChangeText={setIosClientId}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Android Client ID</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text - 1, height: 36, paddingVertical: 6 }]}
-              placeholder="e.g. 123456-xxxx.apps.googleusercontent.com"
-              placeholderTextColor={colors.textDark}
-              value={androidClientId}
-              onChangeText={setAndroidClientId}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-            <Text style={[styles.label, { color: colors.textMuted, fontSize: sizes.sub }]}>Web Client ID</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontSize: sizes.text - 1, height: 36, paddingVertical: 6 }]}
-              placeholder="e.g. 123456-xxxx.apps.googleusercontent.com"
-              placeholderTextColor={colors.textDark}
-              value={webClientId}
-              onChangeText={setWebClientId}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.saveButton,
-              { backgroundColor: accentHex, marginTop: 12, paddingVertical: 10 },
-              pressed && { opacity: 0.8 },
-            ]}
-            onPress={() => {
-              setGoogleClientIds({ ios: iosClientId, android: androidClientId, web: webClientId });
-            }}
-          >
-            <Text style={[styles.saveButtonText, { fontSize: sizes.text }]}>Save Client IDs</Text>
-          </Pressable>
-        </View>
       </View>
 
       {/* Danger Zone Section */}
