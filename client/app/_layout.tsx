@@ -13,6 +13,7 @@ import {
   handleWebViewLoadEnd,
   handleWebViewMessage,
 } from '../store/useBrowserStore';
+import { hydrateGoogleTokens } from '../store/useGoogleAuthStore';
 
 
 function HeaderRightActions() {
@@ -67,6 +68,8 @@ export default function RootLayout() {
     if (hasHydrated) {
       // Force user to land on the welcome/new conversation screen on app launch
       useChatStore.getState().selectThread(null);
+      // Hydrate Google OAuth tokens from SecureStore
+      hydrateGoogleTokens();
     }
   }, [hasHydrated]);
 

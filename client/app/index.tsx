@@ -33,6 +33,7 @@ import { parseSearchContent, SearchSource } from '../utils/sourceParser';
 import { healXmlTags } from '../utils/xmlHealer';
 import { useRouter } from 'expo-router';
 import { useBrowserStore } from '../store/useBrowserStore';
+import { useGoogleAuthStore } from '../store/useGoogleAuthStore';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -409,7 +410,9 @@ export default function ChatScreen() {
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
-      controller.signal
+      controller.signal,
+      undefined,
+      useGoogleAuthStore.getState()._accessToken || undefined
     );
   }, [
     isCurrentThreadStreaming,
@@ -830,7 +833,8 @@ export default function ChatScreen() {
         );
       },
       controller.signal,
-      selectedPersona
+      selectedPersona,
+      useGoogleAuthStore.getState()._accessToken || undefined
     );
   };
 
@@ -905,7 +909,8 @@ export default function ChatScreen() {
         );
       },
       controller.signal,
-      persona
+      persona,
+      useGoogleAuthStore.getState()._accessToken || undefined
     );
   }, [
     apiUrl,
