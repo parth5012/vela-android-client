@@ -18,7 +18,7 @@ export async function streamAgentResponse(
   onDone: (newTitle?: string) => void,
   onError: (error: Error) => void,
   signal?: AbortSignal,
-  persona?: string,
+  agent?: string,
   googleAccessToken?: string
 ): Promise<void> {
   try {
@@ -38,12 +38,12 @@ export async function streamAgentResponse(
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'text/event-stream',
       },
-      body: JSON.stringify({
-        thread_id: threadId,
-        message,
-        persona,
-        google_access_token: googleAccessToken || undefined,
-      }),
+    body: JSON.stringify({
+      thread_id: threadId,
+      message,
+      agent,
+      google_access_token: googleAccessToken || undefined,
+    }),
       signal,
       ...((Platform.OS !== 'web' && process.env.NODE_ENV !== 'test') ? {
         reactNative: { textStreaming: true }

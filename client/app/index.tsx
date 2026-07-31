@@ -147,7 +147,7 @@ export default function ChatScreen() {
 
   const [welcomeQuote, setWelcomeQuote] = useState(QUOTES[0]);
   const [welcomeGreeting, setWelcomeGreeting] = useState('Hello');
-  const [selectedPersona, setSelectedPersona] = useState(defaultPersona || 'personal assistant');
+  const [selectedAgent, setSelectedAgent] = useState(defaultPersona || 'personal assistant');
 
   const pendingTokensMapRef = React.useRef<Record<string, string>>({});
   const throttleTimersRef = React.useRef<Record<string, any>>({});
@@ -788,7 +788,7 @@ export default function ChatScreen() {
     setStreamingThread(activeThreadId, true);
 
     const activeThread = threads.find((t) => t.id === activeThreadId);
-    const selectedPersona = activeThread?.persona || 'personal assistant';
+    const selectedAgent = activeThread?.persona || 'personal assistant';
 
     const controller = new AbortController();
     abortControllersRef.current[activeThreadId] = controller;
@@ -827,30 +827,30 @@ export default function ChatScreen() {
         delete abortControllersRef.current[activeThreadId];
         cleanUpThrottleAndHeal(activeThreadId);
         const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
-        appendToken(
-          activeThreadId,
-          `\n\n⚠️ **Error:** ${errMsg}`
-        );
-      },
-      controller.signal,
-      selectedPersona,
-      useGoogleAuthStore.getState()._accessToken || undefined
-    );
-  };
+      appendToken(
+        activeThreadId,
+        `\n\n⚠️ **Error:** ${errMsg}`
+      );
+    },
+    controller.signal,
+    selectedAgent,
+    useGoogleAuthStore.getState()._accessToken || undefined
+  );
+};
 
 
   const handleSendWelcome = useCallback(async (textToSend: string, personaId?: string) => {
     if (!textToSend.trim()) return;
     if (!apiUrl || !apiKey) {
-      Alert.alert('Configuration Required', 'Please configure your API URL and Key in Settings.');
+      Alert.alert('Configuration Required', 'Please configure API URL & Key in Settings.');
       return;
     }
     Keyboard.dismiss();
 
     const newThreadId = generateUUID();
-    const persona = personaId || selectedPersona;
+    const agent = personaId || selectedAgent;
 
-    createThread('New Conversation', newThreadId, persona);
+    createThread('New Conversation', newThreadId, agent);
     setInput('');
 
     const userMsgId = generateId('msg_user');
@@ -902,20 +902,20 @@ export default function ChatScreen() {
         setStreamingThread(newThreadId, false);
         delete abortControllersRef.current[newThreadId];
         cleanUpThrottleAndHeal(newThreadId);
-        const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed to stream response.';
+        const errMsg = error?.message || (typeof error === 'string' ? error : '') || 'Failed stream response.';
         appendToken(
           newThreadId,
           `\n\n⚠️ **Error:** ${errMsg}`
         );
       },
       controller.signal,
-      persona,
+      agent,
       useGoogleAuthStore.getState()._accessToken || undefined
     );
   }, [
     apiUrl,
     apiKey,
-    selectedPersona,
+    selectedAgent,
     createThread,
     addMessage,
     appendToken,
@@ -1046,19 +1046,19 @@ export default function ChatScreen() {
             <Text style={[styles.sectionTitleLabel, { color: colors.text, fontSize: sizes.text, marginTop: 12 }]}>
               Choose Persona
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaScrollContainer}>
-              {personas.map((p) => {
-                const isSelected = selectedPersona === p.id;
-                return (
-                  <Pressable
-                    key={p.id}
-                    style={[
-                      styles.personaPill,
-                      { backgroundColor: colors.card, borderColor: colors.border },
-                      isSelected && { backgroundColor: accentHex, borderColor: accentHex }
-                    ]}
-                    onPress={() => setSelectedPersona(p.id)}
-                  >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personaScrollContainer}>
+      {personas.map((p) => {
+        const isSelected = selectedAgent === p.id;
+        return (
+          <Pressable
+            key={p.id}
+            style={[
+              styles.personaPill,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              isSelected && { backgroundColor: accentHex, borderColor: accentHex }
+            ]}
+            onPress={() => setSelectedAgent(p.id)}
+          >
                     <Text style={[
                       styles.personaPillText,
                       { color: colors.textMuted, fontSize: sizes.sub },
