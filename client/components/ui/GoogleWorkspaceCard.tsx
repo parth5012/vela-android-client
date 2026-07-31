@@ -6,10 +6,12 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useGoogleAuthStore } from '../../store/useGoogleAuthStore';
 import { useConfigStore } from '../../store/useConfigStore';
+import { parseOAuthCallbackUrl } from '../../utils/oauthCallback';
 
 interface GoogleWorkspaceCardProps {
   colors: {
@@ -150,10 +152,22 @@ export default function GoogleWorkspaceCard({
       );
 
       if (result.type === 'success') {
-        // The backend successfully completed the OAuth flow and redirected back.
-        // Poll the token status endpoint to get user info and confirm.
-        sessionStartedRef.current = true;
-        await checkTokenStatus();
+        // The backend redirected back to vela-client://oauth/callback with the
+        // verdict in the query params. Popup on success/error; on any unknown
+        // or absent verdict keep today's behavior (poll to confirm).
+        const callback = parseOAuthCallbackUrl(result.url);
+
+        if (callback.status === 'success') {
+          Alert.alert('Success', 'Google Workspace connected.');
+          sessionStartedRef.current = true;
+          await checkTokenStatus();
+        } else if (callback.status === 'error') {
+          Alert.alert('Error', callback.message || 'Google sign-in failed.');
+          // Skip the token-status poll — the backend already reported failure.
+        } else {
+          sessionStartedRef.current = true;
+          await checkTokenStatus();
+        }
       } else if (result.type === 'cancel') {
         setError('Google sign-in was cancelled.');
       } else if (result.type === 'dismiss') {
